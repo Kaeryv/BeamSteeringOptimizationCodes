@@ -1,0 +1,4 @@
+bast @ git+https://github.com/Kaeryv/Bast
+keever @ git+https://github.com/Kaeryv/Keever
+torch
+torchvision

@@ -1,0 +1,5 @@
+module purge
+ml releases/2022a
+ml CUDA
+ml Python
+source  env/bin/activate
