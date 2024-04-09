@@ -9,4 +9,4 @@ def freq2pix(amplitudes, phases, resolution=128, harmonics=default_harmonics, th
     for f, a, p in zip(harmonics, amplitudes, phases):
         signal += a * np.sin(f * theta + p) 
 
-    return theta, signal**2 > threshold
+    return theta, (signal**2 > threshold).astype(np.float64)

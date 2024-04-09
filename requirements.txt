@@ -1,4 +1,5 @@
 bast @ git+https://github.com/Kaeryv/Bast
 keever @ git+https://github.com/Kaeryv/Keever
+hybris-py @ git+https://github.com/Kaeryv/Hybris
 torch
 torchvision

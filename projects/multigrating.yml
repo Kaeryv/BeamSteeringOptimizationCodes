@@ -1,0 +1,80 @@
+workdir: &workdir "./"
+define: &num_layers 8
+define: &num_harmonics 5
+
+playbook:
+  init:
+    - type: save
+      item: doe
+      args:
+        filename: 'doe-no-evaluations'
+    - type: action
+      item: optimizer
+      reload: true
+      action: optimize
+      args:
+        fom: "@figure_of_merit"
+        fom_method: eval_multigrating
+        doe: "@doe"
+      output: best_fitness
+    
+    - type: log-info
+      msg: "Done."
+      args: 
+        - "#best_fitness"
+
+
+items:
+  - name: doe
+    type: Database
+    variables:
+      - name: amplitudes
+        type : vreal
+        lower: 0
+        upper: 1
+        size: 
+          - *num_layers
+          - *num_harmonics
+      - name: phases
+        type : vreal
+        lower: 0
+        upper: 1
+        size: 
+          - *num_layers
+          - *num_harmonics
+      - name: depth
+        type : vreal
+        lower: 0
+        upper: 1
+        size: *num_layers
+    storages:
+      - metric
+      - t_orders
+    populate-on-creation:
+      algo: LHS
+      count: 5
+    exporters:
+      npz.all: ["metric", "r"]
+
+  - name: figure_of_merit
+    type: Algorithm
+    actions:
+      - name: eval_multigrating
+        type: module_runner
+        path: user.multigrating
+        workdir: *workdir
+    config:
+        program: angle_batch
+        angles: [0, 60, 10]
+        bilayer_mode: mirror
+
+  - name: optimizer
+    type: Algorithm
+    actions:
+      - name: optimize
+        type: module_runner
+        path: user.pso_optimize
+        workdir: *workdir
+    config:
+      fevals: 2000
+      nagents: 20
