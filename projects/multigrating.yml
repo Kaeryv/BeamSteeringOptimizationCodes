@@ -1,13 +1,10 @@
-workdir: &workdir "./"
-define: &num_layers 8
+workdir: &workdir "./data/free.c/"
+define: &num_layers 16
 define: &num_harmonics 5
+define: &grating_mode "free"
 
 playbook:
   init:
-    - type: save
-      item: doe
-      args:
-        filename: 'doe-no-evaluations'
     - type: action
       item: optimizer
       reload: true
@@ -65,16 +62,18 @@ items:
         workdir: *workdir
     config:
         program: angle_batch
-        angles: [0, 60, 10]
-        bilayer_mode: mirror
+        angles: [0, 60, 30]
+        bilayer_mode: *grating_mode
+        num_layers: *num_layers
 
   - name: optimizer
     type: Algorithm
     actions:
       - name: optimize
         type: module_runner
-        path: user.pso_optimize
+        path: user.cma_optimize
         workdir: *workdir
     config:
-      fevals: 2000
-      nagents: 20
+      fevals: 40000
+      nagents: 40
+      workdir: *workdir

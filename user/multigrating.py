@@ -2,6 +2,7 @@ from bast.layer import Layer, stack_layers
 from bast.extension import ExtendedLayer as EL
 from bast.expansion import Expansion
 from bast.crystal import Crystal
+from .charts import grating_summary_plot
 
 import sys
 
@@ -10,8 +11,8 @@ sys.path.append(".")
 from user.commons import freq2pix
 
 import numpy as np
-import matplotlib.pyplot as plt
 import logging
+import os
 
 pw = (5, 1)
 kp = (0, 0)
@@ -42,9 +43,10 @@ def solve_multigrating(X, depths, wl, twist_angle, polar=(1, 1)):
     lr.fields = True
 
     X1, X2 = X
+    depths1, depths2 = depths
     # Build the upper crystal
-    crystal_up = build_substack(e1, X1, depths)
-    crystal_do = build_substack(e2, X2, depths)
+    crystal_up = build_substack(e1, X1, depths1)
+    crystal_do = build_substack(e2, X2, depths2)
 
     lt = EL(etw, Layer.half_infinite(e2, "transmission", 1.0))
     lt.fields = True
@@ -63,8 +65,9 @@ def solve_multigrating(X, depths, wl, twist_angle, polar=(1, 1)):
     return R, T, big_crystal.expansion.g_vectors
 
 
-def main(program, design=None, angles=None, figpath=None, bilayer_mode="copy"):
+def main(program, design=None, angles=None, figpath=None, bilayer_mode="copy", wavelength=1.01):
     epsg = 4
+    epslow = 2
 
     if program == "showme":
         N = 8
@@ -73,17 +76,17 @@ def main(program, design=None, angles=None, figpath=None, bilayer_mode="copy"):
         g = np.asarray([freq2pix(a, p)[1] for a, p in zip(amps, phases)])
         g = (1 + g) * epsg
         depths = np.random.rand(N)
-        R, T, kxy = solve_multigrating((g, g), depths, 0.6, 3)
+        R, T, kxy = solve_multigrating((g, g), depths, wavelength, 3)
         mag = np.abs(T[1])
-        fig, (ax1, ax2) = plt.subplots(1, 2)
-        gratings_depth = np.repeat(
-            g, np.round(100 * depths / np.sum(depths)).astype(int), axis=0
-        )
-        ax1.matshow(gratings_depth, cmap="Blues")
-        ax2.scatter(*kxy, s=100, marker="o", facecolors="none", edgecolors="gray")
-        ax2.scatter(*kxy, s=mag / np.max(mag) * 100, c="r")
-        ax1.axis("equal")
-        fig.savefig("figs/multigrating.png")
+        #fig, (ax1, ax2) = plt.subplots(1, 2)
+        #gratings_depth = np.repeat(
+        #    g, np.round(100 * depths / np.sum(depths)).astype(int), axis=0
+        #)
+        #ax1.matshow(gratings_depth, cmap="Blues")
+        #ax2.scatter(*kxy, s=100, marker="o", facecolors="none", edgecolors="gray")
+        #ax2.scatter(*kxy, s=mag / np.max(mag) * 100, c="r")
+        #ax1.axis("equal")
+        #fig.savefig("figs/multigrating.png")
 
     elif program == "angle_batch":
         if angles is None:
@@ -96,54 +99,62 @@ def main(program, design=None, angles=None, figpath=None, bilayer_mode="copy"):
         phases *= 2 * np.pi
 
         mags = np.empty_like(angles)
+        i_display = 5
         c = (pw[0] - 1) // 2
         for i, twist_angle in enumerate(angles):
             g = np.asarray([freq2pix(a, p)[1] for a, p in zip(amps, phases)])
-            g = (1 + g) * epsg
+            g = epslow + g * (epsg-epslow)
+            
             if bilayer_mode == "copy":
                 gratings = (g, g)
+                depthss = (depths.copy(), depths.copy())
             elif bilayer_mode == "mirror":
                 gratings = (g, np.flip(g, axis=0))
+                depthss = (depths.copy(), np.flip(depths.copy(), axis=0))
             elif bilayer_mode == "free":
                 gratings = np.split(g, 2, axis=0)
-            R, T, kxy = solve_multigrating(gratings, depths, 0.48, twist_angle)
-            mag = np.abs(T[1]).reshape(5, 5)
+                depthss = np.split(depths.copy(), 2, axis=0)
+
+            R, T, kxy = solve_multigrating(gratings, depthss, wavelength, twist_angle)
+            mag = np.abs(T[1]).reshape(pw[0], pw[0])
+            if i_display == i:
+                mag_display = np.copy(mag)
             mags[i] = mag[c - 1, c + 1] / np.sum(mag)
 
+
+        fom_percent = np.mean(mags*100)
+        logging.debug(f"Grating sim got {fom_percent}% concentration.")
+
+
         if figpath is not None:
-            fig, ((ax1, ax2), (ax3,_)) = plt.subplots(2, 2)
-            ax1.plot(angles, mags * 100, "r.-")
-            ax2.scatter(*kxy, s=100, marker="o", facecolors="none", edgecolors="gray")
-            ax2.scatter(*kxy, s=mag / np.max(mag) * 100, c="r")
-            ax1.set_xlabel("Twist angle [deg]")
-            ax1.set_ylabel("(-1,1) magnitude [%]")
-            ax1.set_title(f"{np.mean(mags)=:0.3f}, {np.prod(mags)=:0.3f}")
-            gratings_depth = np.repeat(
-                g, np.round(100 * depths / np.sum(depths)).astype(int), axis=0
-            )
-            ax3.matshow(gratings_depth, cmap="Blues")
-            fig.savefig(figpath)
+            bilayer_depth = np.sum(depthss, axis=1)
+            gratings_picture = np.vstack((
+                np.repeat( gratings[0], np.round(100 * depthss[0] / np.sum(depths)).astype(int), axis=0),
+                np.repeat( gratings[1], np.round(100 * depthss[1] / np.sum(depths)).astype(int), axis=0),
+            ))
+            grating_summary_plot(figpath, angles, mags, kxy, mag_display, (angles[i_display], 100*mags[i_display]), fom_percent, gratings_picture, bilayer_depth)
 
         return mags
 
 
-#if __name__ == "__main__":
-#    assert len(sys.argv) > 1, "Missing program name."
-#    if len(sys.argv) > 3:
-#        figpath = sys.argv[3]
-#    else:
-#        figpath = None
-#    program = sys.argv[1]
-#    # assert len(sys.argv) > 2, "Missing input file."
-#    N = 8
-#    design = np.random.rand(N, 11)
-#    main(program, design, figpath=figpath)
+if __name__ == "__main__":
+    assert len(sys.argv) > 1, "Missing program name."
+    if len(sys.argv) > 3:
+        figpath = sys.argv[3]
+    else:
+        figpath = None
+    program = sys.argv[1]
+    assert len(sys.argv) > 2, "Missing input file."
+    filepath = sys.argv[2]
+    design = np.load(filepath)["bd"]
+    design = design.reshape(16, 11).copy()
+    main(program, design, figpath=figpath, bilayer_mode="free")
 
 
 # Keever stuff
-def __run__(program, design, angles, bilayer_mode, figpath=None):
+def __run__(program, design, angles, bilayer_mode, num_layers, figpath=None):
     logging.debug(f"{program=}{design.shape=}{angles=}{figpath=}")
-    design = design.reshape(8, 11).copy()
+    design = design.reshape(num_layers, 11).copy()
     angles = angles.copy()
     raw_fom = main(
         program=program,
@@ -152,9 +163,9 @@ def __run__(program, design, angles, bilayer_mode, figpath=None):
         figpath=figpath,
         bilayer_mode=bilayer_mode,
     )
-    fom = np.mean(raw_fom) + np.prod(raw_fom)
+    fom = np.mean(raw_fom) #+ np.prod(raw_fom)
     return fom
 
 
 def __requires__():
-    return {"variables": ["program", "design", "angles", "bilayer_mode"]}
+    return {"variables": ["program", "design", "angles", "bilayer_mode", "num_layers"]}
