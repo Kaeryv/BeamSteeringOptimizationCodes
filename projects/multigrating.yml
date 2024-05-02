@@ -1,5 +1,5 @@
-workdir: &workdir "./data/free.c/"
-define: &num_layers 16
+workdir: &workdir "./data/free.pixmap.12.1/"
+define: &num_layers 12
 define: &num_harmonics 5
 define: &grating_mode "free"
 
@@ -13,12 +13,34 @@ playbook:
         fom: "@figure_of_merit"
         fom_method: eval_multigrating
         doe: "@doe"
-      output: best_fitness
+      output:
+        - best_design
+        - best_fitness
+        - profile
     
+    
+
+    - type: dump_npz
+      directory: *workdir
+      filename: "results.npz" 
+      args:
+        - best_design
+        - best_fitness
+        - profile
+      output: "fom_filename"
+
+    - type: serialize
+      item: figure_of_merit
+      args:
+        method: json
+      output: "results_filename"
+
     - type: log-info
-      msg: "Done."
+      msg: "Best fitness achieved is {} saved at [{}], fom @ [{}]."
       args: 
         - "#best_fitness"
+        - "#results_filename"
+        - "#fom_filename"
 
 
 items:
@@ -63,8 +85,14 @@ items:
     config:
         program: angle_batch
         angles: [0, 60, 30]
-        bilayer_mode: *grating_mode
-        num_layers: *num_layers
+        sim_args:
+          bilayer_mode: *grating_mode
+          num_layers: *num_layers
+          elow: 2.0
+          ehigh: 4.0
+          wavelength: 1.01
+          num_layers: *num_layers
+          pw: [7,1]
 
   - name: optimizer
     type: Algorithm
@@ -74,6 +102,6 @@ items:
         path: user.cma_optimize
         workdir: *workdir
     config:
-      fevals: 40000
-      nagents: 40
+      fevals: 1000
+      nagents: 1
       workdir: *workdir

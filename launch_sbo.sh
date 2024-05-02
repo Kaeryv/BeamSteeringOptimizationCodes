@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
 set -e
-source env/bin/activate
+export NCPUS=10
+# Disable multithreading
+# We use EP workload instead
+. config
 python -m keever.play --project projects/multigrating.yml

@@ -9,7 +9,7 @@ def main(fevals, nagents, objective, doe, nd, workdir):
     es = cma.CMAEvolutionStrategy(nd * [0.5], 0.3, {
         'BoundaryHandler': cma.s.ch.BoundTransform,
         'bounds': [[0.0], [1.0]],
-        #'maxiter': 1000,
+        'maxiter': fevals//nagents,
         #'tolfun': 0.0,
         #'tolx': 0.0,
         #'tolstagnation': np.inf
@@ -32,7 +32,7 @@ def main(fevals, nagents, objective, doe, nd, workdir):
             logging.info(f"New best!")
             best_fitness = copy(iter_fitness)
             best_design = X[iter_best].copy()
-            np.savez(best_path, bd=best_design, bf=best_fitness)
+            np.savez(best_path, bd=best_design, bf=best_fitness, profile=profile)
 
             fitness = objective(args={"design": best_design.copy(), "figpath": f"{workdir}/figs/cur_best_{i}.png"})
             profile.append((i, best_fitness))
@@ -43,7 +43,7 @@ def main(fevals, nagents, objective, doe, nd, workdir):
 
     np.savez(best_path, bd=best_design, bf=best_fitness, profile=profile)
 
-    return best_design, best_fitness, None
+    return best_design, best_fitness, np.asarray(profile)
 
 def __run__(fevals, nagents, fom, fom_method, doe, workdir):
     os.makedirs(workdir, exist_ok=True)

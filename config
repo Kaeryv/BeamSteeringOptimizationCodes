@@ -1,5 +1,17 @@
-module purge
-ml releases/2022a
-ml CUDA
-ml Python
-source  env/bin/activate
+# vim: syntax=sh
+#!/usr/bin/env bash
+
+if [ -z ${CLUSTER+x} ]; then
+  export NCPUS=8
+else
+  module purge
+  ml releases/2022a
+  ml CUDA
+  ml Python
+fi
+. env/bin/activate
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+export BAST_MT_ON=0

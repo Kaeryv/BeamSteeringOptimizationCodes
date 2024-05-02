@@ -3,3 +3,4 @@ keever @ git+https://github.com/Kaeryv/Keever
 hybris-py @ git+https://github.com/Kaeryv/Hybris
 torch
 torchvision
+cma

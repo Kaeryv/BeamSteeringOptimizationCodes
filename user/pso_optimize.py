@@ -15,6 +15,8 @@ def main(fevals, nagents, objective, doe, nd, workdir):
     best_fitness = 0
     best_design = None
     i = 0
+    best_path = f"{workdir}/best.npz"
+    figure_path = f"{workdir}/figs/cur_best_{i}.png"
     while not opt.stop():
         X = opt.ask()
         # X.shape = (nagents, nd)
@@ -28,12 +30,12 @@ def main(fevals, nagents, objective, doe, nd, workdir):
             best_fitness = copy(iter_fitness)
             best_design = X[iter_best].copy()
             np.savez(best_path, bd=best_design, bf=best_fitness)
-            fitness = objective(args={"design": best_design.copy(), "figpath": f"{workdir}/figs/cur_best_{i}.png"})
+            fitness = objective(args={"design": best_design.copy(), "figpath": figure_path})
 
         logging.info(f"{i=}, {iter_fitness=:0.3f}, {best_fitness=:0.3f}")
         i += 1
 
-    fitness = objective(args={"design": best_design, "figpath": "figs/best.png"})
+    fitness = objective(args={"design": best_design, "figpath": f"{workdir}/figs/best.png"})
     np.savez(best_path, bd=best_design, bf=best_fitness)
 
     return best_design, best_fitness, opt.profile
