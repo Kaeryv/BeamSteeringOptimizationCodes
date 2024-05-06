@@ -1,5 +1,5 @@
-workdir: &workdir "./data/free.pixmap.12.1/"
-define: &num_layers 12
+workdir: &workdir "./data/free.pixmap.16.0/"
+define: &num_layers 16
 define: &num_harmonics 5
 define: &grating_mode "free"
 

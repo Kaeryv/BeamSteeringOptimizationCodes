@@ -60,8 +60,9 @@ def build_substack(expansion, X, depths):
     device = list()
     for i, depth in enumerate(depths):
         d = Drawing((256,1), 2)
-        #bx = grating_filtering(X[i], width=1)
-        bx = X[i]
+        bx = grating_filtering(X[i], width=5)
+        #print(f"{np.max(bx)}, {np.min(bx)}")
+        #bx = X[i]
         d.from_numpy((bx).copy())
         if len(d.islands()) == 0 or np.all(X[i] == 2.0):
             crystal.add_layer_uniform(f"G{i}", 2.0,  depth)
@@ -112,7 +113,7 @@ def solve_multigrating(X, depths, wl, twist_angle, polar=(1, 1), pw=(7,1)):
 
 
 def worker(twist_angle, gratings, depths, wl, pw):
-  _, T, kxy = solve_multigrating(gratings, depths, sim_args.wavelength, twist_angle, pw=pw)
+  _, T, kxy = solve_multigrating(gratings, depths, wl, twist_angle, pw=pw)
   return np.abs(T[1]).reshape(pw[0], pw[0]), kxy
 
 def main(program, sim_args, design, angles=None, figpath=None):
@@ -155,6 +156,7 @@ def main(program, sim_args, design, angles=None, figpath=None):
         mag_display = np.copy(angle_magnitudes[i_display])
         gvectors_display = np.copy(angle_gvectors[i_display])
         metric = mag[:, c - 1, c + 1] / np.sum(mag, axis=(1,2))
+        #print(f"{np.mean(metric)}")
 
 
         fom_percent = np.mean(metric*100)
@@ -164,8 +166,10 @@ def main(program, sim_args, design, angles=None, figpath=None):
         if figpath is not None:
             bilayer_depth = np.sum(depthss, axis=1)
             gratings_picture = np.vstack((
-                np.repeat( gratings[0], np.round(100 * depthss[0] / np.sum(depths)).astype(int), axis=0),
-                np.repeat( gratings[1], np.round(100 * depthss[1] / np.sum(depths)).astype(int), axis=0),
+                np.repeat( [grating_filtering(g, width=5) for g in gratings[0]], 
+                          np.round(100 * depthss[0] / np.sum(depths)).astype(int), axis=0),
+                np.repeat( [grating_filtering(g, width=5) for g in gratings[1]], 
+                          np.round(100 * depthss[1] / np.sum(depths)).astype(int), axis=0),
             ))
             grating_summary_plot(figpath, angles, metric, gvectors_display, mag_display, (angles[i_display], 100*metric[i_display]), fom_percent, gratings_picture, bilayer_depth)
 
@@ -187,7 +191,7 @@ if __name__ == "__main__":
             wavelength = 1.01,
             bilayer_mode="free",
             num_layers=12,
-            pw=(13,1)
+            pw=(7,1)
         )
 
     assert len(sys.argv) > 2, "Missing input file."
