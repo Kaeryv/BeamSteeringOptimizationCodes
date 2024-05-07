@@ -1,0 +1,7 @@
+*.png
+*.npy
+*.npz
+*.json
+olddata/
+data/
+__pycache__/
