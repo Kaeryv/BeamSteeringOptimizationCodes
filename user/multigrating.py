@@ -24,6 +24,8 @@ import logging
 from types import SimpleNamespace
 from functools import partial
 
+import user.parameterization as prm
+
 
 
 def binary_dilation(X, w=1):
@@ -52,7 +54,7 @@ def grating_filtering(X, width=1):
 
     return 2 * (bx + 1)
 
-
+fwidth=2
 def build_substack(expansion, X, depths):
     # Create a crystal in the void with the array of gratings
     crystal = Crystal.from_expansion(expansion, void=True)
@@ -60,7 +62,7 @@ def build_substack(expansion, X, depths):
     device = list()
     for i, depth in enumerate(depths):
         d = Drawing((256,1), 2)
-        bx = grating_filtering(X[i], width=5)
+        bx = grating_filtering(X[i], width=fwidth)
         #print(f"{np.max(bx)}, {np.min(bx)}")
         #bx = X[i]
         d.from_numpy((bx).copy())
@@ -112,8 +114,8 @@ def solve_multigrating(X, depths, wl, twist_angle, polar=(1, 1), pw=(7,1)):
     return R, T, big_crystal.expansion.g_vectors
 
 
-def worker(twist_angle, gratings, depths, wl, pw):
-  _, T, kxy = solve_multigrating(gratings, depths, wl, twist_angle, pw=pw)
+def worker(twist_angle, gratings, depths, wl, pw, polar):
+  _, T, kxy = solve_multigrating(gratings, depths, wl, twist_angle, pw=pw, polar=polar)
   return np.abs(T[1]).reshape(pw[0], pw[0]), kxy
 
 def main(program, sim_args, design, angles=None, figpath=None):
@@ -126,26 +128,11 @@ def main(program, sim_args, design, angles=None, figpath=None):
         else:
             angles = np.linspace(angles[0], angles[1], angles[2])
 
-        amps, phases, depths = np.split(design, [5, 10], axis=1)
-        depths = np.squeeze(depths)
-        phases *= 2 * np.pi
-
-        g = np.asarray([freq2pix(a, p)[1] for a, p in zip(amps, phases)])
-        g = sim_args.elow + g * (sim_args.ehigh-sim_args.elow)
+        gratings, depthss = getattr(prm, sim_args.parametrization)(design, sim_args.elow, sim_args.ehigh, sim_args.bilayer_mode, **sim_args.parameterization_args)
         
-        if sim_args.bilayer_mode == "copy":
-            gratings = (g, g)
-            depthss = (depths.copy(), depths.copy())
-        elif sim_args.bilayer_mode == "mirror":
-            gratings = (g, np.flip(g, axis=0))
-            depthss = (depths.copy(), np.flip(depths.copy(), axis=0))
-        elif sim_args.bilayer_mode == "free":
-            gratings = np.split(g, 2, axis=0)
-            depthss = np.split(depths.copy(), 2, axis=0)
-
         i_display = 5
         c = (pw[0] - 1) // 2
-        workerp = partial(worker, gratings=gratings, depths=depthss, wl=sim_args.wavelength, pw=pw)
+        workerp = partial(worker, gratings=gratings, depths=depthss, wl=sim_args.wavelength, pw=pw, polar=sim_args.polar)
         angle_magnitudes, angle_gvectors = [],[]
         with Pool(NUM_THREADS) as p:
             for magnitudes, gvectors in p.imap(workerp, angles):
@@ -155,7 +142,7 @@ def main(program, sim_args, design, angles=None, figpath=None):
         mag = np.asarray(angle_magnitudes)
         mag_display = np.copy(angle_magnitudes[i_display])
         gvectors_display = np.copy(angle_gvectors[i_display])
-        metric = mag[:, c - 1, c + 1] / np.sum(mag, axis=(1,2))
+        metric = mag[:, c - 1, c + 1] #/ np.sum(mag, axis=(1,2))
         #print(f"{np.mean(metric)}")
 
 
@@ -166,13 +153,12 @@ def main(program, sim_args, design, angles=None, figpath=None):
         if figpath is not None:
             bilayer_depth = np.sum(depthss, axis=1)
             gratings_picture = np.vstack((
-                np.repeat( [grating_filtering(g, width=5) for g in gratings[0]], 
-                          np.round(100 * depthss[0] / np.sum(depths)).astype(int), axis=0),
-                np.repeat( [grating_filtering(g, width=5) for g in gratings[1]], 
-                          np.round(100 * depthss[1] / np.sum(depths)).astype(int), axis=0),
+                np.repeat( [grating_filtering(g, width=fwidth) for g in gratings[0]], 
+                          np.round(100 * depthss[0] / np.sum(depthss[0])).astype(int), axis=0),
+                np.repeat( [grating_filtering(g, width=fwidth) for g in gratings[1]], 
+                          np.round(100 * depthss[1] / np.sum(depthss[1])).astype(int), axis=0),
             ))
             grating_summary_plot(figpath, angles, metric, gvectors_display, mag_display, (angles[i_display], 100*metric[i_display]), fom_percent, gratings_picture, bilayer_depth)
-
         return metric
 
 
@@ -185,30 +171,38 @@ if __name__ == "__main__":
         print("---------------------------------------------------------------")
         exit(0)
     
-    sim_args = SimpleNamespace(
-            elow = 2.0,
-            ehigh = 4.0,
-            wavelength = 1.01,
-            bilayer_mode="free",
-            num_layers=12,
-            pw=(7,1)
-        )
 
     assert len(sys.argv) > 2, "Missing input file."
     program = sys.argv[1]
     filepath = sys.argv[2]
     figpath = sys.argv[3] if len(sys.argv) > 3 else None
     design = np.load(filepath)["bd"]
-    design = design.reshape(sim_args.num_layers, 11).copy()
+
+
+
+    sim_args = SimpleNamespace(
+            elow = 2.0,
+            ehigh = 4.0,
+            wavelength = 1.01,
+            bilayer_mode="free",
+            num_layers=10,
+            pw=(7,1),
+            polar=(1,1),
+            parametrization="fftlike",
+            parameterization_args={"harmonics": [0.5,1,1.5]}
+        )
+    if len(sys.argv) > 4:
+        sim_args.pw = (int(sys.argv[4]), 1)
+    design = design.reshape(sim_args.num_layers, -1).copy()
     main(program, sim_args, design, figpath=figpath)
 
 
 # Keever stuff
 def __run__(program, design, angles, sim_args, figpath=None):
     sim_args = SimpleNamespace(**sim_args) if not isinstance(sim_args, SimpleNamespace) else sim_args
-
+    sim_args.polar = (1, 1j)
     logging.debug(f"{program=}{design.shape=}{angles=}{figpath=}")
-    design = design.reshape(sim_args.num_layers, 11).copy()
+    design = design.reshape(sim_args.num_layers, -1).copy()
     angles = angles.copy()
     raw_fom = main(
         program,

@@ -10,6 +10,7 @@ def main(fevals, nagents, objective, doe, nd, workdir):
         'BoundaryHandler': cma.s.ch.BoundTransform,
         'bounds': [[0.0], [1.0]],
         'maxiter': fevals//nagents,
+        'popsize': nagents
         #'tolfun': 0.0,
         #'tolx': 0.0,
         #'tolstagnation': np.inf

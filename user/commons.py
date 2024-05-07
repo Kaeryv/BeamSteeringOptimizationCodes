@@ -1,7 +1,9 @@
 import numpy as np
 
 default_harmonics = np.arange(1, 6)
-def freq2pix(amplitudes, phases, resolution=128, harmonics=default_harmonics, threshold=0.2):
+def freq2pix(amplitudes, phases, resolution=128, harmonics=None, threshold=0.2):
+    if harmonics is None:
+        harmonics = default_harmonics.copy()
     assert len(amplitudes) == len(harmonics)
     assert len(phases) == len(harmonics)
     theta = np.linspace(-np.pi, np.pi, resolution)

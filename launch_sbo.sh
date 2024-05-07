@@ -3,5 +3,11 @@ set -e
 export NCPUS=10
 # Disable multithreading
 # We use EP workload instead
+export LAYERS=12
+export OPTIMIZER=pso
+export SEED=81
+export WORKDIR="./data/free.pixmap.h3.$OPTIMIZER.$LAYERS.$SEED/"
+mkdir -p $WORKDIR
 . config
-python -m keever.play --project projects/multigrating.yml
+envsubst < projects/multigrating.yml > $WORKDIR/project.yml
+python -m keever.play --project $WORKDIR/project.yml

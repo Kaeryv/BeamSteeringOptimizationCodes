@@ -1,12 +1,12 @@
-workdir: &workdir "./data/free.pixmap.16.0/"
-define: &num_layers 16
-define: &num_harmonics 5
+workdir: &workdir $WORKDIR
+define: &num_layers $LAYERS
+define: &num_harmonics 3
 define: &grating_mode "free"
 
 playbook:
   init:
     - type: action
-      item: optimizer
+      item: optimizer-$OPTIMIZER
       reload: true
       action: optimize
       args:
@@ -93,8 +93,24 @@ items:
           wavelength: 1.01
           num_layers: *num_layers
           pw: [7,1]
+          parameterization: fftlike
+          parameterization_args:
+            harmonics: [0.5,1,1.5]
 
-  - name: optimizer
+  - name: optimizer-pso
+    type: Algorithm
+    actions:
+      - name: optimize
+        type: module_runner
+        path: user.pso_optimize
+        workdir: *workdir
+    config:
+      fevals: 8000
+      nagents: 40
+      seed: $SEED
+      workdir: *workdir
+
+  - name: optimizer-cma
     type: Algorithm
     actions:
       - name: optimize
@@ -102,6 +118,6 @@ items:
         path: user.cma_optimize
         workdir: *workdir
     config:
-      fevals: 1000
-      nagents: 1
+      fevals: 8000
+      nagents: 40
       workdir: *workdir
