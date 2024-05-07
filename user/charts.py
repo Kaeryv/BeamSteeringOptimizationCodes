@@ -38,4 +38,5 @@ def grating_summary_plot(figpath, angles, magnitudes, kxy, mag_display, xydisp, 
     
     plt.tight_layout()
     fig.savefig(figpath, transparent=False)
+    plt.close(fig)
     del fig

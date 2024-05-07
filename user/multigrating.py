@@ -128,7 +128,7 @@ def main(program, sim_args, design, angles=None, figpath=None):
         else:
             angles = np.linspace(angles[0], angles[1], angles[2])
 
-        gratings, depthss = getattr(prm, sim_args.parametrization)(design, sim_args.elow, sim_args.ehigh, sim_args.bilayer_mode, **sim_args.parameterization_args)
+        gratings, depthss = getattr(prm, sim_args.parameterization)(design, sim_args.elow, sim_args.ehigh, sim_args.bilayer_mode, **sim_args.parameterization_args)
         
         i_display = 5
         c = (pw[0] - 1) // 2
@@ -188,7 +188,7 @@ if __name__ == "__main__":
             num_layers=10,
             pw=(7,1),
             polar=(1,1),
-            parametrization="fftlike",
+            parameterization="fftlike",
             parameterization_args={"harmonics": [0.5,1,1.5]}
         )
     if len(sys.argv) > 4:
