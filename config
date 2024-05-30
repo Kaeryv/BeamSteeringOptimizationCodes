@@ -5,9 +5,8 @@ if [ -z ${CLUSTER+x} ]; then
   export NCPUS=8
 else
   module purge
-  ml releases/2022a
-  ml CUDA
-  ml Python
+  ml releases/2023a
+  ml SciPy-bundle
 fi
 . env/bin/activate
 export OPENBLAS_NUM_THREADS=1

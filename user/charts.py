@@ -1,27 +1,82 @@
 import matplotlib.pyplot as plt
 import numpy as np
-plt.rcParams.update({'font.size': 20})
+
+import parameterization as prm
 
 
-def grating_summary_plot(figpath, angles, magnitudes, kxy, mag_display, xydisp, fom_percent, gratings_picture, layers_depth, tiles=4, profile=None):
-    fig, ((ax1, ax2), (ax3,ax4)) = plt.subplots(2, 2, figsize=(7.5,7))
-    ax1.plot(angles, magnitudes * 100, "r.-")
-    ax2.scatter(*kxy, s=100, marker="o", facecolors="none", edgecolors="gray")
-    ax2.scatter(*kxy, s=mag_display / np.max(mag_display) * 100, c="r")
-    ax2.set_xlabel("$k_x$",labelpad=0)
-    ax2.set_ylabel("$k_y$",labelpad=-10)
-    ax2.set_title("$\\alpha=60$")
-    ax1.set_xlabel("Twist angle $\\alpha$ [deg]")
-    ax1.set_xlim(0, 61)
-    ax1.set_ylim(0, 105)
-    ax1.set_ylabel("(1,-1) magnitude [%]")
-    ax1.plot(*xydisp, 'ko',  markerfacecolor="none", markersize=20)
-    ax1.set_title(f"avg. {fom_percent:0.1f}") # geoavg. {(np.prod(mags))**(1/len(mags)):0.3f}
-    ax1.axhline(fom_percent, color="k")
-    extent = [tiles-2,tiles-1,0, np.sum(layers_depth)]
-    ax3.matshow(np.tile(gratings_picture, (1, 1)), cmap="Blues", alpha=0.7, extent=extent, aspect=1/3)
-    extent = [0,tiles,0, np.sum(layers_depth)]
-    ax3.matshow(np.tile(gratings_picture, (1,tiles)), cmap="Blues", alpha=0.3, extent=extent, aspect=1/3)
+plt.rcParams.update({"font.size": 20})
+
+
+def grating_side_picture(gratings, layers_depth, minimal_feature_size):
+    bilayer_depth = np.sum(layers_depth, axis=1)
+    gratings_picture = [
+        np.repeat(
+            [prm.grating_filtering(g, width=minimal_feature_size) for g in grating],
+            np.round(100 * slab_layers_depth / np.sum(slab_layers_depth)).astype(int),
+            axis=0,
+        )
+        for slab_layers_depth, grating in zip(layers_depth, gratings)
+    ]
+    print(len(gratings_picture), gratings_picture[0].shape, gratings_picture[1].shape)
+    # exit()
+    gratings_picture = np.vstack(gratings_picture)
+    return gratings_picture, bilayer_depth
+
+
+def plot_angle_magnitude(ax, angles, magnitudes, style="r.-"):
+    fom_percent = np.mean(magnitudes) * 100
+    ax.plot(angles, magnitudes * 100, style)
+    ax.set_xlim(0, 61)
+    ax.set_ylim(0, 105)
+    ax.set_xlabel("Twist angle $\\alpha$ [deg]")
+    ax.set_ylabel("(1,-1) magnitude [%]")
+    ax.axhline(fom_percent, color="k")
+    ax.set_title(f"avg. {fom_percent:0.1f}")
+
+
+def plot_highlight(ax, angle, magnitude):
+    xydisp = (angle, 100 * magnitude)
+    ax.plot(*xydisp, "ko", markerfacecolor="none", markersize=20)
+
+def plot_grid(ax, kxy, mags):
+    ax.scatter(*kxy, s=100, marker="o", facecolors="none", edgecolors="gray")
+    ax.scatter(*kxy, s=mags / np.max(mags) * 100, c="r")
+    ax.set_xlabel("$k_x$", labelpad=0)
+    ax.set_ylabel("$k_y$", labelpad=-10)
+    ax.set_title("$\\alpha=60$")
+
+def grating_summary_plot(
+    figpath,
+    angles,
+    magnitudes,
+    kxy,
+    mag_display,
+    gratings_picture,
+    layers_depth,
+    tiles=4,
+):
+    fig, axs = plt.subplots(2, 2, figsize=(7.5, 7))
+    ((ax1, ax2), (ax3, ax4)) = axs
+    plot_angle_magnitude(ax1, angles, magnitudes)
+    plot_highlight(ax1, angles[5], magnitudes[5])
+
+    plot_grid(ax2, kxy, mag_display)
+    extent = [tiles - 2, tiles - 1, 0, np.sum(layers_depth)]
+    ax3.matshow(
+        np.tile(gratings_picture, (1, 1)),
+        cmap="Blues",
+        alpha=0.7,
+        extent=extent,
+        aspect=1 / 3,
+    )
+    extent = [0, tiles, 0, np.sum(layers_depth)]
+    ax3.matshow(
+        np.tile(gratings_picture, (1, tiles)),
+        cmap="Blues",
+        alpha=0.3,
+        extent=extent,
+        aspect=1 / 3,
+    )
     ax3.axhline(layers_depth[1], c="r", ls="-.")
     ax3.axvline(2, c="k", ls=":")
     ax3.axvline(3, c="k", ls=":")
@@ -29,14 +84,7 @@ def grating_summary_plot(figpath, angles, magnitudes, kxy, mag_display, xydisp, 
     ax3.set_xlabel("x [um]")
     ax3.set_ylabel("z [um]")
 
-    if profile is not None:
-        ax4.plot(profile[:,0], profile[:,1], 'ro')
-        ax4.set_xlabel("Number of simulations")
-        ax4.set_ylabel("Figure of merit.")
-    else:
-        ax4.axis('off')
-    
+    ax4.axis("off")
+
     plt.tight_layout()
-    fig.savefig(figpath, transparent=False)
-    plt.close(fig)
-    del fig
+    return fig, axs

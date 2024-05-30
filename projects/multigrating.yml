@@ -64,7 +64,7 @@ items:
       - name: depth
         type : vreal
         lower: 0
-        upper: 1
+        upper: 0.4
         size: *num_layers
     storages:
       - metric
@@ -84,8 +84,8 @@ items:
         workdir: *workdir
     config:
         program: angle_batch
-        angles: [0, 60, 30]
         sim_args:
+          angles: [0, 60, 50]
           bilayer_mode: *grating_mode
           num_layers: *num_layers
           elow: 2.0
@@ -93,6 +93,8 @@ items:
           wavelength: 1.01
           num_layers: *num_layers
           pw: [7,1]
+          target_order: [-1, 1]
+          polarizations: ["X", "Y", "XY", "LCP", "RCP"]          
           parameterization: fftlike
           parameterization_args:
             harmonics: [0.5,1,1.5]
@@ -105,7 +107,7 @@ items:
         path: user.pso_optimize
         workdir: *workdir
     config:
-      fevals: 8000
+      fevals: 15000
       nagents: 40
       seed: $SEED
       workdir: *workdir
@@ -121,3 +123,15 @@ items:
       fevals: 8000
       nagents: 40
       workdir: *workdir
+  - name: optimizer-lshade
+    type: Algorithm
+    actions:
+      - name: optimize
+        type: module_runner
+        path: user.lshade_optimize
+        workdir: *workdir
+    config:
+      fevals: 8
+      nagents: 4
+      workdir: *workdir
+      seed: $SEED
