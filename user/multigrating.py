@@ -241,7 +241,7 @@ def __run__(program, design, sim_args, figpath=None):
         else sim_args
     )
     logging.debug(f"{program=}{design.shape=}{figpath=}")
-    design = design.reshape(sim_args.num_layers, -1)
+    #design = design.reshape(sim_args.num_layers, -1)
     r = main(deepcopy(sim_args), design.copy())
     if figpath is not None:
         summarygraph(figpath, r, 5)

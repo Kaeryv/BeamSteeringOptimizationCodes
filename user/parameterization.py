@@ -1,5 +1,8 @@
 import numpy as np
 from user.commons import freq2pix
+from user.ellipse import draw_ellipse 
+from PIL import Image, ImageDraw 
+import matplotlib.pyplot as plt
 
 
 def binary_dilation(X, w=1):
@@ -28,8 +31,12 @@ def grating_filtering(X, width=1):
 
     return 2 * (bx + 1)
 
-def fftlike(X, elow, ehigh, bilayer_mode, harmonics=None):
-    amps, phases, depths = np.split(X, [len(harmonics), 2*len(harmonics)], axis=1)
+def fftlike(X, elow, ehigh, bilayer_mode, num_layers=12, harmonics=None):
+    #X = X.reshape(-1, 2*len(harmonics)+1)
+    X = X.flatten()
+    amps, phases, depths = np.split(X, [num_layers*len(harmonics), 2*num_layers*len(harmonics)], axis=0)
+    amps = amps.reshape(num_layers, len(harmonics))
+    phases = phases.reshape(num_layers, len(harmonics))
     depths = np.squeeze(depths)
     phases *= 2 * np.pi
 
@@ -74,4 +81,29 @@ def placeblocks(X, elow, ehigh, bilayer_mode, num_blocks):
         depthss = np.split(depths.copy(), 2, axis=0)
 
     return gratings, depthss
-    
+
+def ellipsis(X, elow, ehigh, bilayer_mode, num_items=3, num_layers=16):
+    xys, axes, angles = np.split(X, [num_items*2, 2*2*num_items], axis=0)
+    xys = xys.reshape(num_items, 2)
+    axes = axes.reshape(num_items, 2)
+    angles = np.squeeze(angles)
+
+    w, h = 256, 256
+    g = Image.new("L", (w, h))
+    for (x,y), (a, b), alpha in zip(xys, axes, angles):
+        draw_ellipse(g, (x,y,a,b,alpha))
+    g = g.resize((256, 16), Image.NEAREST)
+    g = np.asarray(g)
+    g = elow + g * (ehigh-elow)
+    depths = np.ones(num_layers) * 4 / num_layers
+    if bilayer_mode == "copy":
+        gratings = (g, g)
+        depthss = (depths.copy(), depths.copy())
+    elif bilayer_mode == "mirror":
+        gratings = (g, np.flip(g, axis=0))
+        depthss = (depths.copy(), np.flip(depths.copy(), axis=0))
+    elif bilayer_mode == "free":
+        gratings = np.split(g, 2, axis=0)
+        depthss = np.split(depths.copy(), 2, axis=0)
+
+    return gratings, depthss
