@@ -1,7 +1,8 @@
 workdir: &workdir $WORKDIR
 define: &num_layers $LAYERS
-define: &num_items 3
+define: &num_items 14
 define: &grating_mode "free"
+define: &fevals 15000
 
 playbook:
   init:
@@ -63,8 +64,8 @@ items:
           - 2
       - name: angles
         type : vreal
-        lower: -90.0
-        upper: 90.0
+        lower: -45.0
+        upper: 45.0
         size: *num_items
     storages:
       - metric
@@ -97,7 +98,7 @@ items:
           polarizations: ["X", "Y", "XY", "LCP", "RCP"]          
           parameterization: ellipsis
           parameterization_args:
-            num_items: 3
+            num_items: *num_items
             num_layers: *num_layers
 
   - name: optimizer-pso
@@ -108,7 +109,7 @@ items:
         path: user.pso_optimize
         workdir: *workdir
     config:
-      fevals: 2000
+      fevals: *fevals
       nagents: 40
       seed: $SEED
       workdir: *workdir

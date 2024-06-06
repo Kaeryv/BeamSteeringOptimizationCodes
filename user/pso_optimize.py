@@ -8,7 +8,7 @@ from keever.database import countinuous_variables_boundaries
 
 def main(fevals, nagents, objective, doe, nd, workdir, seed):
     opt = ParticleSwarm(nagents, [nd, 0], max_fevals=fevals, 
-        initial_weights=[0.600,1.49618,1.49618,0.0,-16,0.6,1.0])
+        initial_weights=[0.679,1.49618,1.49618,0.0,-16,0.6,0.8])
     # Get the boundaries from the doe
     opt.vmin, opt.vmax = countinuous_variables_boundaries(doe.variables_descr)
     opt.reset(seed)#453

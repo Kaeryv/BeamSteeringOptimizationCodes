@@ -10,7 +10,7 @@ def extend(x, nl):
     return y
 
 folder = sys.argv[1]
-ds = [ (f"PSO.{i}", np.load(f"data/{folder}/free_pixmap_{i}/best.npz")) for i in trange(0, 200) ]
+ds = [ (f"PSO.{i}", np.load(f"data/{folder}/free_pixmap_{i}/best.npz")) for i in trange(0, 100) ]
 layers = int(folder.split("_")[2])
 ds = tqdm(ds)
 dataset = np.asarray([extend(d["profile"], 500) for name, d in ds ])
