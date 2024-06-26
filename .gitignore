@@ -5,3 +5,6 @@
 olddata/
 data/
 __pycache__/
+logs/
+*.pdf
+*.png

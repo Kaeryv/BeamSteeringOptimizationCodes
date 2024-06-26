@@ -1,8 +1,8 @@
 workdir: &workdir $WORKDIR
 define: &num_layers $LAYERS
-define: &num_items 14
+define: &num_items $NUM_ITEMS
 define: &grating_mode "free"
-define: &fevals 15000
+define: &fevals $BUDGET
 
 playbook:
   init:
@@ -95,7 +95,7 @@ items:
           num_layers: *num_layers
           pw: [7,1]
           target_order: [-1, 1]
-          polarizations: ["X", "Y", "XY", "LCP", "RCP"]          
+          polarizations: $POLARIZATIONS        
           parameterization: ellipsis
           parameterization_args:
             num_items: *num_items

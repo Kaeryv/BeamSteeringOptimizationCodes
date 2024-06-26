@@ -3,29 +3,26 @@ import numpy as np
 
 import parameterization as prm
 
-
 plt.rcParams.update({"font.size": 20})
 
 
-def grating_side_picture(gratings, layers_depth, minimal_feature_size):
+def grating_side_picture(gratings, layers_depth, minimal_feature_size, yres=128):
     bilayer_depth = np.sum(layers_depth, axis=1)
     gratings_picture = [
         np.repeat(
             [prm.grating_filtering(g, width=minimal_feature_size) for g in grating],
-            np.round(100 * slab_layers_depth / np.sum(slab_layers_depth)).astype(int),
+            np.ceil(yres * slab_layers_depth / np.sum(slab_layers_depth)).astype(int),
             axis=0,
-        )
+        )[:yres]
         for slab_layers_depth, grating in zip(layers_depth, gratings)
     ]
-    print(len(gratings_picture), gratings_picture[0].shape, gratings_picture[1].shape)
-    # exit()
-    gratings_picture = np.vstack(gratings_picture)
+    gratings_picture = np.vstack(gratings_picture).astype(float)
     return gratings_picture, bilayer_depth
 
 
-def plot_angle_magnitude(ax, angles, magnitudes, style="r.-"):
+def plot_angle_magnitude(ax, angles, magnitudes, style={}):
     fom_percent = np.mean(magnitudes) * 100
-    ax.plot(angles, magnitudes * 100, style)
+    ax.plot(angles, magnitudes * 100, **style)
     ax.set_xlim(0, 61)
     ax.set_ylim(0, 105)
     ax.set_xlabel("Twist angle $\\alpha$ [deg]")
@@ -57,7 +54,7 @@ def grating_summary_plot(
 ):
     fig, axs = plt.subplots(2, 2, figsize=(7.5, 7))
     ((ax1, ax2), (ax3, ax4)) = axs
-    plot_angle_magnitude(ax1, angles, magnitudes)
+    
     plot_highlight(ax1, angles[5], magnitudes[5])
 
     plot_grid(ax2, kxy, mag_display)

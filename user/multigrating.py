@@ -190,10 +190,9 @@ def summarygraph(figpath, r, displayed_angle):
         gratings_picture,
         bilayer_depth,
     )
-    plot_angle_magnitude(axs[0,0], r.sim_args.angles, r.metric[1], style="b-")
-    plot_angle_magnitude(axs[0,0], r.sim_args.angles, r.metric[2], style="g-")
-    plot_angle_magnitude(axs[0,0], r.sim_args.angles, r.metric[3], style="g-")
-    plot_angle_magnitude(axs[0,0], r.sim_args.angles, r.metric[4], style="g-")
+    colors = ['red', 'black', 'blue', 'brown', 'green']
+    for i, col in zip(range(len(r.metric)), colors):
+        plot_angle_magnitude(axs[0,0], r.sim_args.angles, r.metric[i], style={"color": col, "ls": "-."})
     fig.savefig(figpath, transparent=False)
 
 

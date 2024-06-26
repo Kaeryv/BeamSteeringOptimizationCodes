@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm, trange
 import sys
-
+import os
 def extend(x, nl):
     l = len(x)
     y = np.ones(nl) * x[-1]
@@ -10,10 +10,18 @@ def extend(x, nl):
     return y
 
 folder = sys.argv[1]
-ds = [ (f"PSO.{i}", np.load(f"data/{folder}/free_pixmap_{i}/best.npz")) for i in trange(0, 100) ]
-layers = int(folder.split("_")[2])
+ds = list()
+for i in trange(0, 100):
+    file = f"data/{folder}/free_pixmap_{i}/best.npz"
+    if os.path.isfile(file):
+        ds.append((f"PSO.{i}", np.load(file)))
+    else:
+        break
+#layers = int(folder.split("_")[2])
 ds = tqdm(ds)
 dataset = np.asarray([extend(d["profile"], 500) for name, d in ds ])
+configs = np.asarray([d["bd"] for name, d in ds ])
+print(configs[:,-1])
 mean = np.mean(dataset, axis=0)
 std = np.std(dataset, axis=0)
 min = np.min(dataset, axis=0)

@@ -2,6 +2,7 @@ workdir: &workdir $WORKDIR
 define: &num_layers $LAYERS
 define: &num_harmonics 3
 define: &grating_mode "free"
+define: &fevals $BUDGET
 
 playbook:
   init:
@@ -94,10 +95,13 @@ items:
           num_layers: *num_layers
           pw: [7,1]
           target_order: [-1, 1]
-          polarizations: ["X", "Y", "XY", "LCP", "RCP"]          
+          # polarizations: ["X", "Y", "XY", "LCP", "RCP"]          
+          polarizations: $POLARIZATIONS
           parameterization: fftlike
           parameterization_args:
             harmonics: [0.5,1,1.5]
+            num_layers: *num_layers
+
 
   - name: optimizer-pso
     type: Algorithm
@@ -107,7 +111,7 @@ items:
         path: user.pso_optimize
         workdir: *workdir
     config:
-      fevals: 15000
+      fevals: *fevals
       nagents: 40
       seed: $SEED
       workdir: *workdir

@@ -82,7 +82,7 @@ def ellipsis(X, elow, ehigh, bilayer_mode, num_items=3, num_layers=16):
     xys, axes, angles = np.split(X, [num_items*2, 2*2*num_items], axis=0)
     xys = xys.reshape(num_items, 2)
     axes = axes.reshape(num_items, 2)
-    angles = np.squeeze(angles)
+    angles = np.asarray(angles).flatten()
 
     w, h = 256, 256
     g = Image.new("L", (w, h))
