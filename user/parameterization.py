@@ -93,3 +93,7 @@ def ellipsis(X, elow, ehigh, bilayer_mode, num_items=3, num_layers=16):
     g = elow + g * (ehigh-elow)
     depths = np.ones(num_layers) * 4 / num_layers # 2-4
     return apply_bilayer_mode(g, depths, bilayer_mode)
+
+def rawimg(X, elow, ehigh, bilayer_mode, num_layers=16):
+    depths = np.ones(num_layers) * 4 / num_layers # 2-4
+    return apply_bilayer_mode(X, depths, bilayer_mode)
