@@ -74,7 +74,11 @@ for f in files:
     buf = np.load(f)
     designs.append(buf["bd"])
     fitness.append(buf["bf"])
+import pickle
 
+with open("raw_designs.pkl", 'wb') as f:
+    pickle.dump({"designs": designs, "fitness":fitness}, f)
+exit()
 fitness = np.asarray(fitness)
 import matplotlib.colors as cm
 import matplotlib

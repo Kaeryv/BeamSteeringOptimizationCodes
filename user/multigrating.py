@@ -206,8 +206,8 @@ if __name__ == "__main__":
         exit(0)
 
     assert len(sys.argv) > 2, "Missing input file."
-    filepath = sys.argv[1]
-    figpath = sys.argv[2] if len(sys.argv) > 2 else None
+    filepath = sys.argv[2]
+    figpath = sys.argv[3] if len(sys.argv) > 3 else None
     design = np.load(filepath)["bd"]
 
     sim_args = SimpleNamespace(
@@ -215,13 +215,13 @@ if __name__ == "__main__":
         ehigh=4.0,
         wavelength=1.01,
         bilayer_mode="free",
-        num_layers=8,
+        num_layers=16,
         pw=(7, 1),
-        polarizations=["X", "Y", "XY", "LCP", "RCP"],  # LCP+ RCP-
+        polarizations=["X"],#, "Y", "XY", "LCP", "RCP"],  # LCP+ RCP-
         angles=[0, 60, 50],
-        parameterization="fftlike",
+        parameterization="ellipses",
         target_order=(-1, +1),
-        parameterization_args={"harmonics": [0.5, 1, 1.5]},
+        parameterization_args={"num_items": 1},
     )
     if len(sys.argv) > 4:
         sim_args.pw = (int(sys.argv[4]), 1)
