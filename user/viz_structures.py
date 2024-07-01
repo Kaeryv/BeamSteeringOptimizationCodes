@@ -116,6 +116,69 @@ if __name__ == "__main__":
         depths = np.asarray(depths)
         N = gratings_pictures.shape[0]
         img_shape = gratings_pictures.shape[1:]
+'''
+designs = list()
+fitness = list()
+for f in files:
+    buf = np.load(f)
+    designs.append(buf["bd"])
+    fitness.append(buf["bf"])
+import pickle
+
+with open("raw_designs.pkl", 'wb') as f:
+    pickle.dump({"designs": designs, "fitness":fitness}, f)
+exit()
+fitness = np.asarray(fitness)
+import matplotlib.colors as cm
+import matplotlib
+if True:
+    # Generate pictures from devices
+    gratings_pictures = list()
+    depths = list()
+    for d, ni, type in zip(designs, lsnum_items, types):
+        if type == "ellipsis":
+            gratings, layers_depths = getattr(prm, "ellipsis")(
+                d,
+                2.0,
+                4.0,
+                "free",
+                num_items=ni,
+                num_layers=16
+            )
+        else:
+            gratings, layers_depths = getattr(prm, "fftlike")(
+                d,
+                2.0,
+                4.0,
+                "free",
+                num_layers=ni,
+                harmonics = [0.5, 1, 1.5]
+            )
+        depth = np.sum(layers_depths)
+        depths.append(depth)
+        gratings_picture, bilayer_depth = grating_side_picture(gratings, layers_depths, 2,yres=256)
+        gratings_pictures.append(gratings_picture)#gratings_picture
+    gratings_pictures = np.asarray(gratings_pictures)
+    depths = np.asarray(depths)
+    N = gratings_pictures.shape[0]
+    img_shape = gratings_pictures.shape[1:]
+    gratings_pictures = align_gratings(gratings_pictures)
+    #exit()
+    xs = gratings_pictures.reshape(N, -1)
+    xmean = xs.mean()
+    xstd = xs.std()
+    xs -= xmean
+    xs[:,xstd>0.0] /= xstd[xstd>0.0]
+    np.savez_compressed("mldb.npz", xs=xs, y=fitness,img_shape=img_shape)
+    #exit()
+    model = PCA(2)
+    #model = TSNE(2, perplexity=400)
+    #predictor = KMeans(9)
+    predictor = AgglomerativeClustering(9)
+    labels = predictor.fit_predict(xs)
+    x = model.fit_transform(xs)
+    fig, (ax1,ax2) = plt.subplots(2)
+'''
     
         if os.path.isfile("gratings_cache.npy"):
             gratings_pictures = np.load("gratings_cache.npy")

@@ -216,11 +216,11 @@ if __name__ == "__main__":
         bilayer_mode="free",
         num_layers=16,
         pw=(7, 1),
-        polarizations=["X", "Y", "XY", "LCP", "RCP"],  # LCP+ RCP-
+        polarizations=["X"],#, "Y", "XY", "LCP", "RCP"],  # LCP+ RCP-
         angles=[0, 60, 50],
-        parameterization="rawimg",
+        parameterization="ellipses",
         target_order=(-1, +1),
-        parameterization_args={} #{"harmonics": [0.5, 1, 1.5]},
+        parameterization_args={"num_items": 1},
     )
     if len(sys.argv) > 4:
         sim_args.pw = (int(sys.argv[4]), 1)
