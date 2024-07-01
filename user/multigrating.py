@@ -1,11 +1,7 @@
 import sys
-
 sys.path.append(".")
 
-# Disable multithreading
-# We use EP workload instead
 import os
-
 from multiprocessing import Pool
 
 NUM_THREADS = int(os.environ["NCPUS"]) if "NCPUS" in os.environ else 1
@@ -15,8 +11,10 @@ from bast.layer import Layer
 from bast.extension import ExtendedLayer as EL
 from bast.expansion import Expansion
 from bast.crystal import Crystal
-from user.charts import grating_summary_plot
-
+from user.charts import (
+        grating_summary_plot,
+        grating_side_picture,
+        plot_angle_magnitude)
 
 from user.commons import freq2pix
 from bast.draw import Drawing
@@ -27,8 +25,9 @@ from types import SimpleNamespace
 from functools import partial
 
 import user.parameterization as prm
-from charts import grating_side_picture
 
+from itertools import product
+from copy import deepcopy
 
 fwidth = 2
 
@@ -117,8 +116,6 @@ def worker(config, gratings, depths, wl, pw):
     return np.abs(T[1]).reshape(pw[0], pw[0]), kxy
 
 
-from itertools import product
-
 
 def main(sim_args, design):
     pw = sim_args.pw
@@ -175,7 +172,6 @@ def main(sim_args, design):
     )
     return results
 
-from charts import plot_angle_magnitude
 def summarygraph(figpath, r, displayed_angle):
     gratings_picture, bilayer_depth = grating_side_picture(
         r.gratings, r.layers_depths, fwidth
@@ -208,28 +204,30 @@ if __name__ == "__main__":
     assert len(sys.argv) > 2, "Missing input file."
     filepath = sys.argv[1]
     figpath = sys.argv[2] if len(sys.argv) > 2 else None
-    design = np.load(filepath)["bd"]
-
+    if filepath.endswith(".npz"):
+        design = np.load(filepath)["bd"]
+    elif filepath.endswith(".npy"):
+        design = np.load(filepath)
+    print(design.shape)
     sim_args = SimpleNamespace(
         elow=2.0,
         ehigh=4.0,
         wavelength=1.01,
         bilayer_mode="free",
-        num_layers=8,
+        num_layers=16,
         pw=(7, 1),
         polarizations=["X", "Y", "XY", "LCP", "RCP"],  # LCP+ RCP-
         angles=[0, 60, 50],
-        parameterization="fftlike",
+        parameterization="rawimg",
         target_order=(-1, +1),
-        parameterization_args={"harmonics": [0.5, 1, 1.5]},
+        parameterization_args={} #{"harmonics": [0.5, 1, 1.5]},
     )
     if len(sys.argv) > 4:
         sim_args.pw = (int(sys.argv[4]), 1)
-    design = design.reshape(sim_args.num_layers, -1).copy()
+    #design = design.reshape(sim_args.num_layers, -1).copy()
     r = main(sim_args, design)
     summarygraph(figpath, r, 5)
 
-from copy import deepcopy
 
 
 # Keever stuff
