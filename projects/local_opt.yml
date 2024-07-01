@@ -1,0 +1,99 @@
+workdir: &workdir $WORKDIR
+define: &num_layers $LAYERS
+define: &grating_mode "free"
+define: &fevals $BUDGET
+
+playbook:
+  init:
+    - type: action
+      item: optimizer-$OPTIMIZER
+      reload: true
+      action: optimize
+      args:
+        fom: "@figure_of_merit"
+        fom_method: eval_multigrating
+        doe: "@doe"
+      output:
+        - best_design
+        - best_fitness
+        - profile
+    
+    
+
+    - type: dump_npz
+      directory: *workdir
+      filename: "results.npz" 
+      args:
+        - best_design
+        - best_fitness
+        - profile
+      output: "fom_filename"
+
+    - type: serialize
+      item: figure_of_merit
+      args:
+        method: json
+      output: "results_filename"
+
+    - type: log-info
+      msg: "Best fitness achieved is {} saved at [{}], fom @ [{}]."
+      args: 
+        - "#best_fitness"
+        - "#results_filename"
+        - "#fom_filename"
+
+
+items:
+  - name: doe
+    type: Database
+    variables:
+      - name: PCs
+        type : vreal
+        lower: -200
+        upper: 200
+        size: 6
+    storages:
+      - metric
+      - t_orders
+    populate-on-creation:
+      algo: LHS
+      count: 5
+    exporters:
+      npz.all: ["metric", "r"]
+
+  - name: figure_of_merit
+    type: Algorithm
+    actions:
+      - name: eval_multigrating
+        type: module_runner
+        path: user.multigrating
+        workdir: *workdir
+    config:
+        program: angle_batch
+        sim_args:
+          angles: [0, 60, 31]
+          bilayer_mode: *grating_mode
+          num_layers: *num_layers
+          elow: 2.0
+          ehigh: 4.0
+          wavelength: 1.01
+          num_layers: *num_layers
+          pw: [7,1]
+          target_order: [-1, 1]
+          polarizations: $POLARIZATIONS        
+          parameterization: rawimg
+          parameterization_args:
+            num_layers: *num_layers
+
+  - name: optimizer-pso
+    type: Algorithm
+    actions:
+      - name: optimize
+        type: module_runner
+        path: user.pso_optimize
+        workdir: *workdir
+    config:
+      fevals: *fevals
+      nagents: 40
+      seed: $SEED
+      workdir: *workdir
