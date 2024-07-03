@@ -21,7 +21,6 @@ for i in trange(0, 100):
 ds = tqdm(ds)
 dataset = np.asarray([extend(d["profile"], 500) for name, d in ds ])
 configs = np.asarray([d["bd"] for name, d in ds ])
-print(configs[:,-1])
 mean = np.mean(dataset, axis=0)
 std = np.std(dataset, axis=0)
 min = np.min(dataset, axis=0)

@@ -224,12 +224,11 @@ if __name__ == "__main__":
     )
     if len(sys.argv) > 4:
         sim_args.pw = (int(sys.argv[4]), 1)
-    #design = design.reshape(sim_args.num_layers, -1).copy()
     r = main(sim_args, design)
     summarygraph(figpath, r, 5)
 
 
-
+from copy import deepcopy as cpy
 # Keever stuff
 def __run__(program, design, sim_args, figpath=None):
     sim_args = (
@@ -237,13 +236,12 @@ def __run__(program, design, sim_args, figpath=None):
         if not isinstance(sim_args, SimpleNamespace)
         else sim_args
     )
-    logging.debug(f"{program=}{design.shape=}{figpath=}")
-    #design = design.reshape(sim_args.num_layers, -1)
-    r = main(deepcopy(sim_args), design.copy())
+    logging.debug(f"{program=}{design=}{figpath=}")
+    r = main(cpy(sim_args), cpy(design))
     if figpath is not None:
         summarygraph(figpath, r, 5)
-    return np.mean(r.metric)
+    return {"fitness": np.mean(r.metric)}
 
 
 def __requires__():
-    return {"variables": ["program", "design", "angles", "sim_args"]}
+    return {"variables": ["program", "design", "angles", "sim_args", "figpath"]}
