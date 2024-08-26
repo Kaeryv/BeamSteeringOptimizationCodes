@@ -6,17 +6,30 @@ import parameterization as prm
 plt.rcParams.update({"font.size": 20})
 
 
-def grating_side_picture(gratings, layers_depth, minimal_feature_size, yres=128):
+def grating_side_picture(gratings, layers_depth, minimal_feature_size, ppm=24, pic_height=6):
     bilayer_depth = np.sum(layers_depth, axis=1)
     gratings_picture = [
         np.repeat(
             [prm.grating_filtering(g, width=minimal_feature_size) for g in grating],
-            np.ceil(yres * slab_layers_depth / np.sum(slab_layers_depth)).astype(int),
+            np.ceil(ppm * slab_layers_depth).astype(int),
             axis=0,
-        )[:yres]
+        )
         for slab_layers_depth, grating in zip(layers_depth, gratings)
     ]
     gratings_picture = np.vstack(gratings_picture).astype(float)
+    target_height_px = ppm * pic_height
+    if gratings_picture.shape[0] > target_height_px:
+        print("[ERROR]")
+    elif gratings_picture.shape[0] < target_height_px:
+        missing = target_height_px - gratings_picture.shape[0]
+        if missing % 2 == 0:
+            pad = np.ones((missing//2, gratings_picture.shape[1]))
+            gratings_picture = np.vstack((pad, gratings_picture, pad))
+        else:
+            padu = np.ones((missing//2, gratings_picture.shape[1]))
+            padd = np.ones((missing//2+1, gratings_picture.shape[1]))
+            gratings_picture = np.vstack((padu, gratings_picture, padd))
+    #print(gratings_picture.shape)
     return gratings_picture, bilayer_depth
 
 
@@ -58,7 +71,7 @@ def grating_summary_plot(
     plot_highlight(ax1, angles[5], magnitudes[5])
 
     plot_grid(ax2, kxy, mag_display)
-    extent = [tiles - 2, tiles - 1, 0, np.sum(layers_depth)]
+    extent = [tiles - 2, tiles - 1, 0, 6]
     ax3.matshow(
         np.tile(gratings_picture, (1, 1)),
         cmap="Blues",
@@ -66,7 +79,7 @@ def grating_summary_plot(
         extent=extent,
         aspect=1 / 3,
     )
-    extent = [0, tiles, 0, np.sum(layers_depth)]
+    extent = [0, tiles, 0, 6]
     ax3.matshow(
         np.tile(gratings_picture, (1, tiles)),
         cmap="Blues",
@@ -80,6 +93,7 @@ def grating_summary_plot(
     ax3.xaxis.tick_bottom()
     ax3.set_xlabel("x [um]")
     ax3.set_ylabel("z [um]")
+    ax3.axis("equal")
 
     ax4.axis("off")
 

@@ -50,22 +50,22 @@ items:
     variables:
       - name: positions
         type : vreal
-        lower: 0
-        upper: 1
+        lower: -0.5
+        upper:  0.5
         size: 
           - *num_items
           - 2
       - name: axes
         type : vreal
-        lower: 0
-        upper: 1
+        lower: 0.0
+        upper: 0.5
         size: 
           - *num_items
           - 2
       - name: angles
         type : vreal
-        lower: -45.0
-        upper: 45.0
+        lower: -0.7854
+        upper: 0.7854
         size: *num_items
     storages:
       - metric
@@ -86,7 +86,7 @@ items:
     config:
         program: angle_batch
         sim_args:
-          angles: [0, 60, 21]
+          angles: [0, 60, 31]
           bilayer_mode: *grating_mode
           num_layers: *num_layers
           elow: 2.0
@@ -100,6 +100,7 @@ items:
           parameterization_args:
             num_items: *num_items
             num_layers: *num_layers
+            depth: 3.2
 
   - name: optimizer-pso
     type: Algorithm
@@ -113,3 +114,5 @@ items:
       nagents: 40
       seed: $SEED
       workdir: *workdir
+      pso_weights: [0.679,1.49618,1.49618,0.0,-16,0.6,1.0]
+

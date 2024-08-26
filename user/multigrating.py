@@ -27,29 +27,31 @@ from functools import partial
 import user.parameterization as prm
 
 from itertools import product
-from copy import deepcopy
 
 fwidth = 2
 
-
+import matplotlib.pyplot as plt
 def build_substack(expansion, X, depths):
     # Create a crystal in the void with the array of gratings
     crystal = Crystal.from_expansion(expansion, void=True)
-
     device = list()
     for i, depth in enumerate(depths):
-        d = Drawing((256, 1), 2)
-        bx = prm.grating_filtering(X[i], width=fwidth)
-        # print(f"{np.max(bx)}, {np.min(bx)}")
-        # bx = X[i]
-        d.from_numpy((bx).copy())
-        if len(d.islands()) == 0 or np.all(X[i] == 2.0):
-            crystal.add_layer_uniform(f"G{i}", 2.0, depth)
-        elif np.all(X[i] == 4.0):
-            crystal.add_layer_uniform(f"G{i}", 4.0, depth)
+        d = Drawing((512, 1), 2)
+        elow = np.min(X[i])
+        ehigh = np.max(X[i])
+        if not np.all(X[i] == X[i, 0]):
+            pass
+            bx = X[i]
+            #bx = prm.grating_filtering(X[i], width=fwidth, elow=elow, ehigh=ehigh)
         else:
-            crystal.add_layer_analytical(f"G{i}", d.islands(), d.background, depth)
-            # crystal.add_layer_pixmap(f"G{i}", d.canvas(),  depth)
+            bx = X[i]
+        if np.all(X[i] == X[i, 0]):
+            crystal.add_layer_uniform(f"G{i}", X[i, 0], depth)
+        else:
+            #d.from_numpy((bx).copy())
+            #len(d.islands()) == 0 or n
+            #crystal.add_layer_analytical(f"G{i}", d.islands(), d.background, depth)
+            crystal.add_layer_pixmap(f"G{i}", bx[:, np.newaxis],  depth)
 
         device.append(f"G{i}")
 
@@ -152,10 +154,6 @@ def main(sim_args, design):
         len(sim_args.polarizations), len(sim_args.angles), *angle_gvectors[0].shape
     )
 
-    i_display = 5
-    # mag_display = np.copy(angle_magnitudes[i_display])
-    # gvectors_display = np.copy(angle_gvectors[i_display])
-
     c = (pw[0] - 1) // 2
     metric = angle_magnitudes[..., c + sim_args.target_order[0], c + sim_args.target_order[1]]
 
@@ -187,9 +185,11 @@ def summarygraph(figpath, r, displayed_angle):
         bilayer_depth,
     )
     colors = ['red', 'black', 'blue', 'brown', 'green']
-    for i, col in zip(range(len(r.metric)), colors):
-        plot_angle_magnitude(axs[0,0], r.sim_args.angles, r.metric[i], style={"color": col, "ls": "-."})
+    for i, col, pol in zip(range(len(r.metric)), colors, r.sim_args.polarizations):
+        plot_angle_magnitude(axs[0,0], r.sim_args.angles, r.metric[i], style={"color": col, "ls": "-.", "label": pol})
+    fig.legend()
     fig.savefig(figpath, transparent=False)
+    fig.savefig(figpath.replace(".png", ".pdf"), transparent=True)
 
 
 if __name__ == "__main__":
@@ -216,11 +216,13 @@ if __name__ == "__main__":
         bilayer_mode="free",
         num_layers=16,
         pw=(7, 1),
-        polarizations=["X"],#, "Y", "XY", "LCP", "RCP"],  # LCP+ RCP-
-        angles=[0, 60, 50],
-        parameterization="ellipses",
+        polarizations=["X", "Y"],#, "Y", "XY", "LCP", "RCP"],  # LCP+ RCP-
+        angles=[0, 60, 30],
+        parameterization="ellipsis",
         target_order=(-1, +1),
-        parameterization_args={"num_items": 1},
+        
+        #parameterization_args={"num_layers": 14, "harmonics": [0.5,1,1.5]},
+        parameterization_args={"num_items": 12, "depth": 3.2,},
     )
     if len(sys.argv) > 4:
         sim_args.pw = (int(sys.argv[4]), 1)

@@ -95,7 +95,6 @@ items:
           num_layers: *num_layers
           pw: [7,1]
           target_order: [-1, 1]
-          # polarizations: ["X", "Y", "XY", "LCP", "RCP"]          
           polarizations: $POLARIZATIONS
           parameterization: fftlike
           parameterization_args:
@@ -115,27 +114,5 @@ items:
       nagents: 40
       seed: $SEED
       workdir: *workdir
+      pso_weights: [0.679,1.49618,1.49618,0.0,-16,0.6,1.0]
 
-  - name: optimizer-cma
-    type: Algorithm
-    actions:
-      - name: optimize
-        type: module_runner
-        path: user.cma_optimize
-        workdir: *workdir
-    config:
-      fevals: 8000
-      nagents: 40
-      workdir: *workdir
-  - name: optimizer-lshade
-    type: Algorithm
-    actions:
-      - name: optimize
-        type: module_runner
-        path: user.lshade_optimize
-        workdir: *workdir
-    config:
-      fevals: 8
-      nagents: 4
-      workdir: *workdir
-      seed: $SEED

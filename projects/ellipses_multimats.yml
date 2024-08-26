@@ -1,8 +1,8 @@
 workdir: &workdir $WORKDIR
 define: &num_layers $LAYERS
+define: &num_items $NUM_ITEMS
 define: &grating_mode "free"
 define: &fevals $BUDGET
-define: &npc 10
 
 playbook:
   init:
@@ -12,13 +12,15 @@ playbook:
       action: optimize
       args:
         fom: "@figure_of_merit"
-        fom_method: eval_chain
+        fom_method: eval_multigrating
         doe: "@doe"
       output:
         - best_design
         - best_fitness
         - profile
     
+    
+
     - type: dump_npz
       directory: *workdir
       filename: "results.npz" 
@@ -46,56 +48,63 @@ items:
   - name: doe
     type: Database
     variables:
-      - name: PCs
+      - name: positions
         type : vreal
-        lower: -1.5
-        upper: 1.5
-        size: *npc
+        lower: -0.5
+        upper:  0.5
+        size: 
+          - *num_items
+          - 2
+      - name: axes
+        type : vreal
+        lower: 0.0
+        upper: 0.5
+        size: 
+          - *num_items
+          - 2
+      - name: angles
+        type : vreal
+        lower: -0.7854
+        upper: 0.7854
+        size: *num_items
+      - name: materials
+        type: vcateg
+        count: 3
+        size: *num_items
     storages:
       - metric
       - t_orders
     populate-on-creation:
       algo: LHS
-      count: 10
+      count: 5
     exporters:
       npz.all: ["metric", "r"]
 
   - name: figure_of_merit
     type: Algorithm
     actions:
-      - name: eval_chain
-        type: sequence_runner
-        actions:
-          - name: inverse_transform
-            type: module_runner
-            path: user.pcakit
-            workdir: *workdir
-
-          - name: eval_multigrating
-            type: module_runner
-            path: user.multigrating
-            workdir: *workdir
+      - name: eval_multigrating
+        type: module_runner
+        path: user.multigrating
+        workdir: *workdir
     config:
-        pca_opts:
-          dbpath: gratings_cache.npy
-          modelpath: $PCAMODEL
-          NPC: *npc
-          num_layers: *num_layers
         program: angle_batch
         sim_args:
-          angles: [0, 60, 51]
+          angles: [0, 60, 31]
           bilayer_mode: *grating_mode
           num_layers: *num_layers
           elow: 2.0
           ehigh: 4.0
           wavelength: 1.01
-          num_layers: *num_layers
           pw: [7,1]
           target_order: [-1, 1]
           polarizations: $POLARIZATIONS        
-          parameterization: rawimg
+          parameterization: ellipsismm
           parameterization_args:
+            materials: [2.0, 3.0, 4.0 ]
+            num_items: *num_items
             num_layers: *num_layers
+            depth: 3.2
 
   - name: optimizer-pso
     type: Algorithm
@@ -106,7 +115,8 @@ items:
         workdir: *workdir
     config:
       fevals: *fevals
-      pso_weights: [0.679,1.49618,1.49618,0.0,-16,0.6,0.8]
       nagents: 40
       seed: $SEED
       workdir: *workdir
+      pso_weights: [0.679,1.49618,1.49618,0.0,-16,0.6,1.0]
+
