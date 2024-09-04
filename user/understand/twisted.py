@@ -13,7 +13,7 @@ from itertools import product
 from bast.alternative import incident
 from functools import partial
 
-pw = (5,1)
+pw = (3,1)
 pwt = (pw[0],pw[0])
 
 def draw_parallelogram(canvas, x0, y0, w, h, r, epsilon=4):
@@ -49,14 +49,15 @@ def get_canvas_para(o, h, w, resolution = (128, 256), epsilon=4, epsilon_bg=2):
     return np.fliplr(canvas)
   else:
     return canvas
-
+dbuffer = 0.99
 def build_crystal(canvas, ta_deg=0, height=4):
   e1, e2 = Expansion(pw), Expansion(pw)
-  e2.rotate(ta_deg)
+  e1.rotate(ta_deg)
   dlayer = height / canvas.shape[0]
   cl = Crystal.from_expansion(e1 + e2)
   cl.add_layer("Sref", Layer.half_infinite(e1, "reflexion", 1.0), True)
   cl.add_layer("Strans", Layer.half_infinite(e2, "transmission", 1.0), True)
+  cl.add_layer("Sbuffer", Layer.uniform(e2, 1.0, dbuffer), True)
   
   device = []
   for i, layer_eps in enumerate(canvas):
@@ -70,6 +71,9 @@ def build_crystal(canvas, ta_deg=0, height=4):
     else:
       cl.add_layer(name, Layer.pixmap(ecur, layer_eps[:, np.newaxis], dlayer), True)
     device.append(name)
+  device.extend(["Sbuffer"]*2)
+  device.insert(0, "Sbuffer")
+  device.insert(0, "Sbuffer")
   cl.set_device(device, [True]*len(device))
   return cl
 
@@ -103,35 +107,44 @@ if False:
   plt.tight_layout()
   plt.show()
 
-if False:
+if True:
   fig, ax = plt.subplots(figsize=(6,4), dpi=300)
   #d = Drawing(canvas_size, eps_bg)
   #d.ellipse((0, params[1]),   (params[3],params[2]), params[4], eps_fg)
   pic = get_canvas_para(-20.0, 3.0, 0.5, epsilon=4, epsilon_bg=2, resolution=(128,256))
   ta_deg=20
   cl = build_crystal(pic, ta_deg=ta_deg)
-  cl.set_source(1.01, te=1,tm=0)
+  cl.set_source(1.01, te=1,tm=1)
   cl.solve()
   xres, yres = 2, 128
   zres = 512
   xcells = 8
-  x, y, z = coords(0, xcells, 0.5, 0.5, -0.1, cl.depth+3, (xres, yres, zres))
+  dafter = 2.9
+  dair = 2 *  dbuffer
+  dbefore = -2.9
+  cldepth = cl.depth - 4 * dbuffer
+  print(cldepth)
+  print(dbefore)
+  exit()
+  x, y, z = coords(0, xcells, 0.5, 0.5, dbefore, cldepth+dafter, (xres, yres, zres))
 
   E, H = cl.fields_volume(x, y, z)
-  extent = [0, xcells, 0, cl.depth+3]
-  im = ax.matshow(np.real(E[:, 0, :, xres//2]), extent=extent, cmap="RdBu", origin="lower")
-  extent = [0, xcells, 0, cl.depth/2]
-  ax.contourf((np.tile(pic[:64, :], (1,xcells))), levels=[3,4], extent=extent, colors=['k'], alpha=0.3)
-  extent = [0, xcells/ np.sin(np.deg2rad(90-ta_deg)), cl.depth/2, cl.depth]
-  ax.contourf((np.tile(pic[64:, :], (1,xcells))), levels=[3,4], extent=extent, colors=['k'], alpha=0.3)
-  ax.axhline(4, color='k')
-  ax.axhline(2, color='k', ls=":")
+  extent = [0, xcells, dafter+cldepth, dbefore]
+  im = ax.matshow(np.real(E[:, 0, :, xres//2]), extent=extent, cmap="RdBu", origin="upper")
+  
+  #extent = [0, xcells, 0, cldepth/2]
+  #ax.contourf((np.tile(pic[:64, :], (1,xcells))), levels=[3,4], extent=extent, colors=['k'], alpha=0.3)
+  #extent = [0, xcells / np.cos(np.deg2rad(ta_deg/2)), cldepth/2, cl.depth]
+  #ax.contourf((np.tile(pic[64:, :], (1,xcells))), levels=[3,4], extent=extent, colors=['k'], alpha=0.3)
+  #ax.axhline((cldepth)/2, color='k')
+  #ax.axhline(2, color='k', ls=":")
+  
   ax.axis("equal")
   ax.set_xlabel("X [µm]")
   ax.set_ylabel("Z [µm]")
   ax.set_xlim(0, xcells)
   plt.colorbar(im)
-  fig.savefig('Fields.png')
+  fig.savefig('figs/Fields.png')
 
 '''
 Compute the fields for different twist angles and make a gif.
@@ -166,7 +179,7 @@ if False:
 
 
   ani = animation.FuncAnimation(fig=fig, func=update, frames=N, interval=200)
-  ani.save("test.gif")
+  ani.save("figs/tilt.gif")
 
 
 polars = {"te": (1,0), "tm": (0,1), "tem": (1,1)}
@@ -195,7 +208,8 @@ def worker(config):
   return sy.flatten() * np.sqrt(fac.real)
 
 import os
-if True:
+# Parameter sweep
+if False:
   no, nh = 128, 128
   orientations = np.linspace(-40, 40, no)
   #heights = np.linspace(1.5, 4.0, nh)
