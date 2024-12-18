@@ -29,7 +29,11 @@ import user.parameterization as prm
 from itertools import product
 
 fwidth = 2
+import pickle
 
+def dump_variable(variable, filename):
+    with open(filename, 'wb') as file:
+        pickle.dump(variable, file)
 import matplotlib.pyplot as plt
 def build_substack(expansion, X, depths):
     # Create a crystal in the void with the array of gratings
@@ -81,7 +85,8 @@ def solve_multigrating(X, depths, wl, twist_angle, polar=(1, 1), pw=(7, 1)):
         polar = str2polar(polar)
     e1 = Expansion(pw)
     e2 = Expansion(pw)
-    e2.rotate(twist_angle)
+    e2.rotate(twist_angle/2)
+    e1.rotate(-twist_angle/2)
     etw = e1 + e2
 
     # Build the outer medium (air)
@@ -121,8 +126,10 @@ def worker(config, gratings, depths, wl, pw):
 
 def main(sim_args, design):
     pw = sim_args.pw
-    sim_args.angles = np.linspace(
-        sim_args.angles[0], sim_args.angles[1], sim_args.angles[2]
+    sim_args.angles = np.deg2rad(
+        np.linspace(
+            sim_args.angles[0], sim_args.angles[1], sim_args.angles[2]
+        )
     )
     configurations = list(product(sim_args.polarizations, sim_args.angles))
 
@@ -216,17 +223,18 @@ if __name__ == "__main__":
         bilayer_mode="free",
         num_layers=16,
         pw=(7, 1),
-        polarizations=["X", "Y"],#, "Y", "XY", "LCP", "RCP"],  # LCP+ RCP-
-        angles=[0, 60, 30],
+        polarizations=["X", "Y","RCP", "LCP"],#, "Y", "XY", "LCP", "RCP"],  # LCP+ RCP-
+        angles=[0, 60, 91],
         parameterization="ellipsis",
         target_order=(-1, +1),
-        
         #parameterization_args={"num_layers": 14, "harmonics": [0.5,1,1.5]},
-        parameterization_args={"num_items": 12, "depth": 3.2,},
-    )
+        #parameterization_args={"num_items": 12, "num_layers": 16,"depth": 3.2},#,"materials": [2.0, 3.0, 4.0 ]
+        parameterization_args={"num_items": 12, "num_layers": 16,"depth": 3.2, "materials": [2.0, 3.0, 4.0 ]},#,
+    )   
     if len(sys.argv) > 4:
         sim_args.pw = (int(sys.argv[4]), 1)
     r = main(sim_args, design)
+    dump_variable(r, "sim_data.pkl")
     summarygraph(figpath, r, 5)
 
 

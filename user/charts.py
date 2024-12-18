@@ -9,8 +9,8 @@ plt.rcParams.update({"font.size": 20})
 def grating_side_picture(gratings, layers_depth, minimal_feature_size, ppm=24, pic_height=6):
     bilayer_depth = np.sum(layers_depth, axis=1)
     gratings_picture = [
-        np.repeat(
-            [prm.grating_filtering(g, width=minimal_feature_size) for g in grating],
+        np.repeat(#prm.grating_filtering(, width=minimal_feature_size)
+            [g for g in grating],
             np.ceil(ppm * slab_layers_depth).astype(int),
             axis=0,
         )
@@ -35,7 +35,7 @@ def grating_side_picture(gratings, layers_depth, minimal_feature_size, ppm=24, p
 
 def plot_angle_magnitude(ax, angles, magnitudes, style={}):
     fom_percent = np.mean(magnitudes) * 100
-    ax.plot(angles, magnitudes * 100, **style)
+    ax.plot(np.rad2deg(angles), magnitudes * 100, **style)
     ax.set_xlim(0, 61)
     ax.set_ylim(0, 105)
     ax.set_xlabel("Twist angle $\\alpha$ [deg]")
@@ -78,6 +78,8 @@ def grating_summary_plot(
         alpha=0.7,
         extent=extent,
         aspect=1 / 3,
+        vmin=1,
+        vmax=4
     )
     extent = [0, tiles, 0, 6]
     ax3.matshow(
@@ -86,6 +88,8 @@ def grating_summary_plot(
         alpha=0.3,
         extent=extent,
         aspect=1 / 3,
+        vmin=1,
+        vmax=4
     )
     ax3.axhline(layers_depth[1], c="r", ls="-.")
     ax3.axvline(2, c="k", ls=":")

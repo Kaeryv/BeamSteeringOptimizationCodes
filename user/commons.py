@@ -12,3 +12,8 @@ def freq2pix(amplitudes, phases, resolution=256, harmonics=None, threshold=0.2):
         signal += a * np.sin(f * theta + p) 
 
     return theta, (signal**2 > threshold).astype(np.float64)
+
+import pickle
+def load_variable(filename):
+    with open(filename, 'rb') as file:
+        return pickle.load(file)

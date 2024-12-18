@@ -10,12 +10,14 @@ def extend(x, nl):
     return y
 
 folder = sys.argv[1]
+count = int(sys.argv[2])
 ds = list()
-for i in trange(0, 60):
+for i in trange(0, count):
     file = f"data/{folder}/free_pixmap_{i}/best.npz"
     if os.path.isfile(file):
         ds.append((f"PSO.{i}", np.load(file)))
     else:
+        print(f"[WARNING]: broke at {i}")
         break
 #layers = int(folder.split("_")[2])
 ds = tqdm(ds)

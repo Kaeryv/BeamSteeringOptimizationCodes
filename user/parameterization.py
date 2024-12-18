@@ -19,7 +19,6 @@ def binary_erosion(X, w=1):
     return out
 
 def grating_filtering(X, width=1, elow=2, ehigh=4):
-
     bx = X > (elow + ehigh) / 2
     bx = binary_erosion(bx, width)
     bx = binary_dilation(bx, width)
@@ -77,6 +76,10 @@ def placeblocks(X, elow, ehigh, bilayer_mode, num_blocks, **kwargs):
     g = np.asarray([coords2pix(c, w) for c, w in zip(centers, widths)])
     g = elow + g * (ehigh-elow)
     return apply_bilayer_mode(g, depths, bilayer_mode)
+
+def ellipsis_depth(X, elow, ehigh, bilayer_mode, num_items=3, num_layers=16, **kwargs):
+    others, depth = np.split(X, [5*num_items], axis=0)
+    return ellipsis(others, elow, ehigh, bilayer_mode, num_items=num_items, depth=depth, num_layers=num_layers, **kwargs)
 
 def ellipsis(X, elow, ehigh, bilayer_mode, num_items=3, depth=4, num_layers=16, **kwargs):
     xys, axes, angles = np.split(X, [num_items*2, 2*2*num_items], axis=0)

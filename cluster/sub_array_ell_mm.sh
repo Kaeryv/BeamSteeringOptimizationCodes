@@ -3,7 +3,7 @@
 #SBATCH --output=logs/%x.%A_%a.log
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=08:00:00
+#SBATCH --time=16:00:00
 #SBATCH --mem-per-cpu=2G
 #SBATCH --array=0-99
 
@@ -18,7 +18,7 @@ export LAYERS=16
 export OPTIMIZER=pso
 export SEED=$SLURM_ARRAY_TASK_ID
 export BUDGET=15000
-export NUM_ITEMS=16
+export NUM_ITEMS=2
 export POLARIZATIONS="['X','Y','RCP','LCP']"
 export WORKDIR="./data/ellipsismm_${NUM_ITEMS}_${LAYERS}_${OPTIMIZER}/free_pixmap_$SEED/"
 
