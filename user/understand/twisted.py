@@ -1,19 +1,18 @@
 import sys
 sys.path.append(".")
-from bast import Crystal, Expansion, Layer
+from khepri import Crystal, Expansion, Layer
 import matplotlib.pyplot as plt
 import numpy as np
-from bast.misc import coords
 from multiprocessing import Pool
 from itertools import product
 import os
-from bast.draw import Drawing
+from khepri.draw import Drawing
 from functools import partial
 from types import SimpleNamespace
 import user.parameterization as prm
 
 pw = (5,1)
-pwt = (pw[0],pw[0])
+pwt = (pw[0], pw[0])
 program = sys.argv[1]
 
 def pic_from_npz():
@@ -84,14 +83,18 @@ def build_crystal(canvas, ta_rad=0, height=4, fields=False, onlyfirst=False):
   return cl
 
 polars = {"te": (1,0), "tm": (0,1), "tem": (1,1)}
-polar = "te"
-hslab = 3.2
 
-onlyfirst = sys.argv[2] == "first"
-plane = sys.argv[3]
-struct = sys.argv[4]
 
 if program == "fields":
+  polar = "te"
+  hslab = 3.2
+  assert sys.argv[2] in ["first", "both"]
+  onlyfirst = sys.argv[2] == "first"
+  plane = sys.argv[3]
+  struct = sys.argv[4]
+  '''-------------------------
+    Field maps computation.
+  -------------------------'''
   if struct == "opt":
     pic = pic_from_npz()
     hslab = 3.2
@@ -120,8 +123,6 @@ if program == "fields":
       plt.savefig("debug.png")
       exit()
     cldepth = cl.depth - 4 * dbuffer
-    #x, y, z = coords(0.5, 0.5, 0, xcells, dbefore, dbefore+dair+hslab+dafter, (xres, yres, zres))
-    #x, y, z = coords(0.5, 0.5, 0, xcells , dbefore, dbefore+dair+hslab+dafter, (xres, yres, zres))
     x = y = np.linspace(0, xcells, xres)
     x, y = np.meshgrid(x, y, indexing="ij")
     z = np.linspace(dbefore, dbefore+dair+hslab+dafter, zres)
@@ -129,11 +130,10 @@ if program == "fields":
     np.save(filename, E)
   else:
     E = np.load(filename)
-  print(pic.shape)
-  #exit()
+
   component = 0
   fig, ax = plt.subplots(figsize=(4,3), dpi=300)
-  extent = [0, xcells, dbefore+dair+hslab+dafter, dbefore]
+  extent = [xcells, 0, dbefore+dair+hslab+dafter, dbefore]
   kw = {'cmap': "RdBu", 'origin': "upper", 'aspect': "auto", "extent": extent, "vmin":-1, 'vmax': 1}
   if plane == "x":
     im = ax.matshow(np.real(E[:, component, :, xres//2]), **kw)
@@ -141,10 +141,6 @@ if program == "fields":
     im = ax.matshow(np.real(E[:, component, xres//2, :]), **kw)
   ax.set_xlim(0, 12)
   c = pic.shape[0]//2
-  extent = [0, xcells, dair, dair+hslab/2]
-  #ax.contourf((np.tile(pic[:c,:], (1,xcells))), levels=[3,4], extent=extent, colors=['k'], alpha=0.3)
-  extent = [0, xcells / np.cos(ta_rad), dair+hslab/2, dair+hslab]
-  #ax.contourf((np.tile(pic[c:,:], (1,xcells))), levels=[3,4], extent=extent, colors=['k'], alpha=0.3)
   ax.axhline(dair + hslab, color='k', ls=":")
   ax.axhline(dair, color='k', ls=":")
   ax.axhline(dair+hslab/2, color='k', ls=":")
@@ -153,15 +149,19 @@ if program == "fields":
   ax.set_xlabel(f"{plane} [µm]")
   ax.set_ylabel("Z [µm]")
   ax.set_xlim(0, xcells)
-  plt.colorbar(im)
+  cb = plt.colorbar(im)
+  cb.set_label("real(Ex)")
+  plt.tight_layout()
   filename = f'figs/fields/efield_{sys.argv[2]}_{sys.argv[3]}_{sys.argv[4]}_{round(ta_deg,1)}'
   fig.savefig(f'{filename}.png')
-  fig.savefig(f'{filename}.pdf')
+  #fig.savefig(f'{filename}.pdf')
 
 
 def worker(config, twist_angle):
   h, o = config
-  xz_pic = parallelogram_inside_slab(o, h, 0.4, eps_parallelogram=4, eps_background=2, hslab=hslab)
+  #h = 3.2
+  w = 0.2
+  xz_pic = parallelogram_inside_slab(o, h, w, eps_parallelogram=4, eps_background=2, hslab=hslab)
   cl = build_crystal(xz_pic, ta_rad=twist_angle, height=hslab)
   cl.set_source(1.01, te=polars[polar][0],tm=polars[polar][1])
   cl.solve()
@@ -181,20 +181,27 @@ def viz_configs(configs, shape):
   exit()
 # Parameter sweep
 if program == "sweep":
-  id = int(sys.argv[2])
+  '''-------------------------
+    Width - Height - Tilt maps.
+  -------------------------'''
+  hslab, polar = 3.2, "tm"
+  ta_deg = float(ta_arg := sys.argv[2]) / 10
   no, nh = 64, 64
   omin, omax, hmin, hmax = -40, 40, 1.0, hslab
+  wmin, wmax = 0.01, 0.99
   orientations = np.deg2rad(np.linspace(omin, omax, no))
   heights = np.linspace(hmin, hmax, nh)
-  #heights = np.linspace(0.05, 0.95, nh)
+  widths = np.linspace(wmin, wmax, nh)
   rt = []
   configs = list(product(heights, orientations))
   #viz_configs(configs, (no, nh))
-  filename = f"components_study/understand_twisted_spacer.{polar}.{pw[0]}.{id}.npy"
+  folder = "data/components_study/"
+  filename = f"{folder}/sweep.height.{polar}.{pw[0]}.{ta_arg}.npy"
+  os.makedirs(folder, exist_ok=True)
   num_orders = pwt[0] * pwt[1]
   if not os.path.isfile(filename):
     print("File does not exist. Computing.")
-    ta_rad = np.deg2rad(59) #np.linspace(0, 60, 10)[id])
+    ta_rad = np.deg2rad(ta_deg)
     workeri = partial(worker, twist_angle=ta_rad)
     with Pool(4) as p:
       rt = p.map(workeri, configs)
@@ -202,7 +209,6 @@ if program == "sweep":
     np.save(filename, rt)
   else:
     rt = np.load(filename)
-    print(rt.shape)
   mag = np.abs(rt)**2
   phase = np.angle(rt)
 
@@ -211,6 +217,7 @@ if program == "sweep":
     ax.set_xticklabels([str(omin), "0", str(omax)])
     ax.set_yticks([0,0.5,1])
     ax.set_yticklabels([np.max(heights),(np.max(heights)+np.min(heights))/2, np.min(heights)])
+    #ax.set_yticklabels([np.max(widths),(np.max(widths)+np.min(widths))/2, np.min(widths)])
     ax.xaxis.tick_bottom()
   
   def setup_axes(axs):
@@ -221,17 +228,26 @@ if program == "sweep":
     
     for j, ax in np.ndenumerate(axs):
       ax.set_title(f"{[i-pwt[0]//2 for i in j]}")
+  mode = "plot_2"
+  if mode == "plot_1":
+    fig, axs = plt.subplots(pwt[0], pwt[1], figsize=(12,12), dpi=300)
+    setup_axes(axs)
+    axs = axs.flatten()
+    for i in range(num_orders):
+      print("eff.", i, np.max(mag[..., i]))
+      im = axs[i].matshow(mag[..., i], extent=[0, 1, 0,1], vmin=0, vmax=1)
+      setlims(axs[i])
+    fig.subplots_adjust(right=0.9, left=0.08, top=0.95, bottom=0.08)
+    cbar_ax = fig.add_axes([0.92, 0.1, 0.03, 0.8])
+    fig.colorbar(im, cax=cbar_ax)
+  else:
+    fig, axs = plt.subplots(1, pwt[0], figsize=(4,12), dpi=220)
+    for j, i in enumerate([2, 4, 6]):
+      im = axs[j].matshow(mag[..., i], extent=[0, 1, 0,1], vmin=0, vmax=1)
+    fig.subplots_adjust(right=0.9, left=0.08, top=0.95, bottom=0.08)
+    plt.tight_layout()
 
-  fig, axs = plt.subplots(pwt[0], pwt[1], figsize=(12,12), dpi=300)
-  setup_axes(axs)
-  axs = axs.flatten()
-  for i in range(num_orders):
-    im = axs[i].matshow(mag[..., i], extent=[0, 1, 0,1], vmin=0, vmax=1)
-    setlims(axs[i])
-  fig.subplots_adjust(right=0.9, left=0.08, top=0.95, bottom=0.08)
-  cbar_ax = fig.add_axes([0.92, 0.1, 0.03, 0.8])
-  fig.colorbar(im, cax=cbar_ax)
-  fig.savefig(f"components_study/OrientationInfluenceSpacer.{polar}.{id}.png")
+  fig.savefig(f"figs/components_study/OrientationInfluenceSpacer.height.{mode}.{polar}.{ta_arg}.png")
 
 
 if False:
@@ -260,7 +276,7 @@ if program == "fancy":
   rt = []
   configs = list(product(heights, orientations))
   #viz_configs(configs, (no, nh))
-  filename = f"components_study/understand_twisted_spacer.{polar}.{pw[0]}.{id}.npy"
+  filename = f"components_study/understand_twisted_width.{polar}.{pw[0]}.{id}.npy"
   num_orders = pwt[0] * pwt[1]
   if not os.path.isfile(filename):
     print(f"File {filename} does not exist, error.")
@@ -280,8 +296,8 @@ if program == "fancy":
     for ax in axs[:]:
       ax.set_xlabel("Slant angle [deg]")
     for ax in axs[:]:
-      #ax.set_ylabel("Para. Width [um]")
-      ax.set_ylabel("Para. Height [um]")
+      ax.set_ylabel("Para. Width [um]")
+      #ax.set_ylabel("Para. Height [um]")
     
 
   fig, axs = plt.subplots(1, pwt[0], figsize=(7,3), dpi=300)
@@ -297,14 +313,14 @@ if program == "fancy":
   axs[2].axvline(1-0.72, color="w", ls="--")
   im = axs[1].matshow(mag[..., c, c], extent=[0, 1, 0,1], vmin=0, vmax=1)
   im = axs[2].matshow(mag[..., c+1, c-1], extent=[0, 1, 0,1], vmin=0, vmax=1)
-  np.save("twisted.slantheightmappm.npy", mag[..., c-1, c+1])
+  np.save("twisted.slantwidthmappm.npy", mag[..., c-1, c+1])
   for i in range(pwt[0]):
     setlims(axs[i])
   fig.subplots_adjust(right=0.9, left=0.08, top=0.95, bottom=0.08)
   cbar_ax = fig.add_axes([0.92, 0.1, 0.03, 0.8])
   fig.colorbar(im, cax=cbar_ax)
-  fig.savefig(f"components_study/OrientationInfluenceSpacer.{polar}.{id}.png")
-  fig.savefig(f"components_study/OrientationInfluenceSpacer.{polar}.{id}.pdf")
+  fig.savefig(f"components_study/Width.{polar}.{id}.png")
+  fig.savefig(f"components_study/Width.{polar}.{id}.pdf")
 
   fig, ax = plt.subplots()
   x = np.linspace(-45, 45, len(mag[..., c+1, c-1].T[:, 40]))
@@ -314,3 +330,49 @@ if program == "fancy":
   print(np.rad2deg(0.15))
   ax.plot(x, np.exp(-xr**2/0.08**2)*0.6)
   fig.savefig("Efficiency.png")
+
+
+if program == "spectrum":
+  polar = "te"
+  hslab = 3.2
+  assert sys.argv[2] in ["first", "both"]
+  onlyfirst = sys.argv[2] == "first"
+  plane = sys.argv[3]
+  struct = sys.argv[4]
+  '''-------------------------
+    Field maps computation.
+  -------------------------'''
+  if struct == "opt":
+    pic = pic_from_npz()
+    hslab = 3.2
+    ta_deg = float(sys.argv[6])
+  else:
+    pic = parallelogram_inside_slab(np.deg2rad(-22.5), 2.7, 0.4, eps_parallelogram=4, eps_background=2, hslab=hslab)
+    ta_deg = float(sys.argv[5])
+  ta_rad = np.deg2rad(ta_deg)
+  filename = "tmp/spectrum.npy"
+  freqs = np.linspace(0.8, 1.1, 150)
+  if not os.path.isfile(filename):
+    cl = build_crystal(pic, ta_rad=ta_rad, fields=True, height=hslab, onlyfirst=onlyfirst)
+    RT = list()
+    for i, f in enumerate(freqs):
+      cl.set_source(1/f, te=polars[polar][0],tm=polars[polar][1])
+      cl.solve()
+      RT.append(cl.poynting_flux_end())
+    RT = np.array(RT)
+    np.save(filename, RT)
+
+  else:
+    RT = np.load(filename)
+
+  fig, ax = plt.subplots(figsize=(4,3), dpi=300)
+  ax.plot(freqs, RT[:, 0], "b-", label="reflexion")
+  ax.plot(freqs, RT[:, 1], "r-", label="transmission")
+  ax.axvline(1/1.01, ls=":", color="k")
+  ax.text(1/1.01, 0.5, " Operation\n frequency")
+  ax.set_xlabel("Frequency [c/a]")
+  ax.set_xlabel("Norm. Poynting Flux")
+  plt.legend()
+  plt.tight_layout()
+  filename = f'figs/spectrum_{sys.argv[2]}_{sys.argv[3]}_{sys.argv[4]}_{round(ta_deg,1)}'
+  fig.savefig(f'{filename}.png')
