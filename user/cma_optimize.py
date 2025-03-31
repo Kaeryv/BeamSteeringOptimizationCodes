@@ -4,11 +4,14 @@ import numpy as np
 import logging
 from copy import copy
 import os
+from keever.database import countinuous_variables_boundaries
 
 def main(fevals, nagents, objective, doe, nd, workdir):
-    es = cma.CMAEvolutionStrategy(nd * [0.5], 0.3, {
+    vmin, vmax =  countinuous_variables_boundaries(doe.variables_descr)
+    center = (vmax - vmin) / 2 + vmin
+    es = cma.CMAEvolutionStrategy(center, 0.5, {
         'BoundaryHandler': cma.s.ch.BoundTransform,
-        'bounds': [[0.0], [1.0]],
+        'bounds': [vmin, vmax],
         'maxiter': fevals//nagents,
         'popsize': nagents
         #'tolfun': 0.0,
@@ -23,14 +26,14 @@ def main(fevals, nagents, objective, doe, nd, workdir):
     best_path = f"{workdir}/best.npz"
     while not es.stop():
         X = es.ask()
-        fitness = np.asarray([objective(args={"design": x.copy()}) for x in X])
+        fitness = np.asarray([objective(args={"design": x.copy()})["fitness"] for x in X])
         es.tell(X, [-f for f in fitness])
 
         iter_best = np.argmax(fitness)
         iter_fitness = fitness[iter_best]
 
         if iter_fitness > best_fitness:
-            logging.info(f"New best!")
+            logging.info("New best!")
             best_fitness = copy(iter_fitness)
             best_design = X[iter_best].copy()
             np.savez(best_path, bd=best_design, bf=best_fitness, profile=profile)
@@ -46,7 +49,7 @@ def main(fevals, nagents, objective, doe, nd, workdir):
 
     return best_design, best_fitness, np.asarray(profile)
 
-def __run__(fevals, nagents, fom, fom_method, doe, workdir):
+def __run__(fevals, nagents, fom, fom_method, doe, workdir, **kwargs):
     os.makedirs(workdir, exist_ok=True)
     os.makedirs(workdir + "/figs", exist_ok=True)
     nd = doe.num_scalar_variables

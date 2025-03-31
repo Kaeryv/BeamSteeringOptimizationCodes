@@ -7,17 +7,17 @@ from multiprocessing import Pool
 NUM_THREADS = int(os.environ["NCPUS"]) if "NCPUS" in os.environ else 1
 print("Using ", NUM_THREADS, "threads.")
 
-from bast.layer import Layer
-from bast.extension import ExtendedLayer as EL
-from bast.expansion import Expansion
-from bast.crystal import Crystal
+from khepri.layer import Layer
+from khepri.extension import ExtendedLayer as EL
+from khepri.expansion import Expansion
+from khepri.crystal import Crystal
 from user.charts import (
         grating_summary_plot,
         grating_side_picture,
         plot_angle_magnitude)
 
 from user.commons import freq2pix
-from bast.draw import Drawing
+from khepri.draw import Drawing
 
 import numpy as np
 import logging
@@ -196,7 +196,7 @@ def summarygraph(figpath, r, displayed_angle):
         plot_angle_magnitude(axs[0,0], r.sim_args.angles, r.metric[i], style={"color": col, "ls": "-.", "label": pol})
     fig.legend()
     fig.savefig(figpath, transparent=False)
-    fig.savefig(figpath.replace(".png", ".pdf"), transparent=True)
+    #fig.savefig(figpath.replace(".png", ".pdf"), transparent=True)
 
 
 if __name__ == "__main__":

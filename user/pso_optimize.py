@@ -1,4 +1,4 @@
-from hybris.optim import ParticleSwarm
+from hybris.optim import ParticleSwarm, RuleSet, setup_opt_control
 from functools import partial
 import numpy as np
 import logging
@@ -13,10 +13,14 @@ from keever.database import (
     categorical_variables_num_values)
 
 
-def main(fevals, nagents, objective, doe, nd, workdir, seed, pso_weights):
+def main(fevals, nagents, objective, doe, nd, workdir, seed, pso_weights, controller):
     ncat = count_categorical_variables(doe.variables_descr)
     opt = ParticleSwarm(nagents, [nd, ncat], max_fevals=fevals, 
         initial_weights=pso_weights)
+    if controller != "none":
+        print("Setting up a controller for PSO")
+        crtl, opti_params = RuleSet.load(controller)
+        setup_opt_control(opt, crtl)
     # Get the boundaries from the doe
     opt.vmin, opt.vmax = countinuous_variables_boundaries(doe.variables_descr)
     if ncat > 0:
@@ -24,7 +28,7 @@ def main(fevals, nagents, objective, doe, nd, workdir, seed, pso_weights):
         opt.num_categories(cats)
     opt.reset(seed)
     
-    best_fitness = 0
+    best_fitness = -1
     best_design = None
     i = 0
     best_path = f"{workdir}/best.npz"
@@ -49,17 +53,17 @@ def main(fevals, nagents, objective, doe, nd, workdir, seed, pso_weights):
 
     fitness = objective(args={"design": best_design, "figpath": f"{workdir}/figs/best.png"})["fitness"]
     np.savez(best_path, bd=best_design, bf=best_fitness, profile=opt.profile)
-
+    print(f"{best_design=}")
     return best_design, best_fitness, opt.profile
 
 
-def __run__(fevals, nagents, fom, fom_method, doe, workdir, seed,pso_weights):
+def __run__(fevals, nagents, fom, fom_method, doe, workdir, seed,pso_weights, controller):
     os.makedirs(workdir, exist_ok=True)
     os.makedirs(workdir + "/figs", exist_ok=True)
     nd = doe.num_scalar_variables
     objective = partial(fom.action, name=fom_method)
-    return main(fevals, nagents, objective, doe, nd, workdir, seed,pso_weights)
+    return main(fevals, nagents, objective, doe, nd, workdir, seed,pso_weights, controller)
 
 
 def __requires__():
-    return {"variables": ["fevals", "nagents", "fom", "fom_method", "doe", "workdir", "seed", "pso_weights"]}
+    return {"variables": ["fevals", "nagents", "fom", "fom_method", "doe", "workdir", "seed", "pso_weights", "controller"]}
